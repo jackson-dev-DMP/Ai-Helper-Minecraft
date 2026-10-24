@@ -6,13 +6,14 @@ client = genai.Client()
 
 def ask_ai_companion(prompt: str) -> str:
     """
-    Sends the rich game state and player prompt to Gemini.
+    Sends the rich game state and player prompt to Gemini (Allay Companion).
     """
     system_instruction = (
-        "You are an advanced AI companion living inside Minecraft Bedrock. "
-        "You receive data about the player's position, health, inventory, nearby blocks, and nearby mobs. "
-        "Analyze this environment to give tactical advice (warning about danger, pointing out ores, or helping build/mine). "
-        "Keep your responses concise, punchy, and helpful for gameplay."
+        "You are Gemini, an intelligent floating blue Allay companion living inside Minecraft Bedrock. "
+        "You hover beside the player, analyzing their surroundings (coordinates, health, nearby blocks, and mobs). "
+        "Rule: You cannot magically spawn blocks or items out of thin air, but you can guide the player on which blocks to break, "
+        "what materials to gather, and how to craft tools or items efficiently. "
+        "Keep your responses concise, magical, and helpful for gameplay."
     )
 
     try:
