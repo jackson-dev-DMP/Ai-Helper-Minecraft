@@ -6,16 +6,16 @@ from ai_logic import ask_ai_companion
 
 app = FastAPI(title="Minecraft AI Companion Backend")
 
-# Enable CORS so your GitHub Pages frontend can talk to Render without browser blocking
+# Enable CORS for dashboard web access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins (you can restrict this to your GitHub Pages URL later)
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# In-memory storage for active world sessions (session_code -> latest state)
+# In-memory storage for active world sessions
 active_sessions: Dict[str, Dict[str, Any]] = {}
 
 class EnvironmentData(BaseModel):
@@ -38,9 +38,6 @@ def read_root():
 
 @app.get("/api/companion/status/{session_code}")
 def get_session_status(session_code: str):
-    """
-    Allows the GitHub Pages dashboard to check what the AI currently sees in a specific world!
-    """
     if session_code not in active_sessions:
         return {"status": "no_data", "message": "No activity recorded for this session code yet."}
     return {"status": "active", "data": active_sessions[session_code]}
@@ -64,14 +61,15 @@ def interact_with_ai(event: MinecraftEvent):
 
         prompt = f"{env_summary}\n\nPlayer [{event.player_name}] says/requests: '{event.message}'"
         
-        # Get AI response from Gemini
-        ai_response = ask_ai_companion(prompt)
+        # Get AI response and format with Gemini tag
+        raw_ai_response = ask_ai_companion(prompt)
+        formatted_ai_response = f"Gemini: {raw_ai_response}"
         
-        # SAVE state to our active session memory so the dashboard can display it!
+        # Save state to active session memory
         active_sessions[event.session_code] = {
             "player_name": event.player_name,
             "last_message": event.message,
-            "ai_response": ai_response,
+            "ai_response": formatted_ai_response,
             "environment": env_dict,
             "timestamp": "Just now"
         }
@@ -79,7 +77,7 @@ def interact_with_ai(event: MinecraftEvent):
         return {
             "status": "success",
             "session_code": event.session_code,
-            "ai_response": ai_response
+            "ai_response": formatted_ai_response
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
