@@ -2,23 +2,22 @@ import os
 from google import genai
 from google.genai import types
 
-# Initialize the Gemini client
-# (It will automatically look for the GEMINI_API_KEY environment variable)
 client = genai.Client()
 
 def ask_ai_companion(prompt: str) -> str:
     """
-    Sends a prompt/log from Minecraft to Gemini and returns the AI's response or decision.
+    Sends the rich game state and player prompt to Gemini.
     """
     system_instruction = (
-        "You are an AI companion living inside Minecraft Bedrock. "
-        "You help the player by deciding actions like mining, fighting, or building. "
-        "Keep your responses concise and action-oriented."
+        "You are an advanced AI companion living inside Minecraft Bedrock. "
+        "You receive data about the player's position, health, inventory, nearby blocks, and nearby mobs. "
+        "Analyze this environment to give tactical advice (warning about danger, pointing out ores, or helping build/mine). "
+        "Keep your responses concise, punchy, and helpful for gameplay."
     )
 
     try:
         response = client.models.generate_content(
-            model='gemini-2.5-flash',  # Fast and efficient model for real-time app loops
+            model='gemini-2.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -28,10 +27,4 @@ def ask_ai_companion(prompt: str) -> str:
         return response.text
     except Exception as e:
         return f"Error communicating with Gemini: {str(e)}"
-
-# Quick test if run directly
-if __name__ == "__main__":
-    test_log = "Player says: 'Help me find diamonds near my location!'"
-    print("Sending to Gemini:", test_log)
-    print("AI Response:", ask_ai_companion(test_log))
-  
+        
