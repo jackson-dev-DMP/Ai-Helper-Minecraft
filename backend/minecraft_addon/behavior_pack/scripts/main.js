@@ -1,22 +1,44 @@
 import { world, system } from "@minecraft/server";
 import { http, HttpRequest, HttpHeader } from "@minecraft/server-net";
 
-// REPLACE this with your deployed Render backend URL
 const BACKEND_URL = "https://your-backend-app.onrender.com/api/companion/interact";
-
-// Unique session code for your world
 const WORLD_SESSION_CODE = "WORLD_FRANCE_01"; 
 
+// 1. Spawn the Allay placeholder companion when you enter the world
+world.afterEvents.playerSpawn.subscribe((event) => {
+    if (!event.initialSpawn) return; // Run only once per session join
+    
+    const player = event.player;
+    const dimension = player.dimension;
+
+    try {
+        const spawnPos = { 
+            x: player.location.x + 1, 
+            y: player.location.y + 1, 
+            z: player.location.z + 1 
+        };
+        
+        // Spawn the Allay in its signature blue!
+        const companion = dimension.spawnEntity("minecraft:allay", spawnPos);
+        companion.nameTag = "§bGemini (AI Companion)";
+        
+        player.sendMessage("§b[AI Companion]§r Your blue Allay companion has manifested!");
+    } catch (error) {
+        player.sendMessage("§c[AI Error]§r Could not spawn Allay entity.");
+    }
+});
+
+// 2. Listen to chat commands, scan environment, and talk to Gemini
 world.afterEvents.chatSend.subscribe(async (event) => {
     const player = event.sender;
     const message = event.message;
 
     if (message.startsWith("!ai ")) {
         const query = message.replace("!ai ", "").trim();
-        player.sendMessage(`§b[AI Companion]§r Scanning environment & asking Gemini...`);
+        player.sendMessage(`§b[Gemini Allay]§r Scanning blocks and thinking...`);
 
         try {
-            // 1. Gather player coordinates & stats
+            // Gather player coordinates & stats
             const loc = player.location;
             const playerPos = {
                 x: Math.floor(loc.x),
@@ -27,7 +49,7 @@ world.afterEvents.chatSend.subscribe(async (event) => {
             const healthComponent = player.getComponent("health");
             const currentHealth = healthComponent ? healthComponent.currentValue : 20;
 
-            // 2. Radar scan for nearby blocks
+            // Radar scan for nearby blocks (helping you find what to mine/break)
             let nearbyBlocks = [];
             const dimension = player.dimension;
             
@@ -48,7 +70,7 @@ world.afterEvents.chatSend.subscribe(async (event) => {
                 }
             }
 
-            // 3. Scan for nearby mobs
+            // Scan for nearby mobs/threats
             let nearbyMobs = [];
             try {
                 const entities = dimension.getEntities({
@@ -65,7 +87,7 @@ world.afterEvents.chatSend.subscribe(async (event) => {
                 }
             } catch (e) {}
 
-            // 4. Build JSON payload
+            // Build payload for backend
             const payload = JSON.stringify({
                 session_code: WORLD_SESSION_CODE,
                 player_name: player.name,
@@ -80,7 +102,7 @@ world.afterEvents.chatSend.subscribe(async (event) => {
                 }
             });
 
-            // 5. Send HTTP POST request
+            // Send request to Render backend
             const request = new HttpRequest(BACKEND_URL);
             request.method = "POST";
             request.body = payload;
@@ -92,6 +114,7 @@ world.afterEvents.chatSend.subscribe(async (event) => {
             
             if (response.status === 200) {
                 const data = JSON.parse(response.body);
+                // Print Gemini's response in chat
                 world.sendMessage(`§a[AI Companion]§r ${data.ai_response}`);
             } else {
                 player.sendMessage(`§c[AI Error]§r Server returned status ${response.status}`);
@@ -102,4 +125,3 @@ world.afterEvents.chatSend.subscribe(async (event) => {
         }
     }
 });
-        
