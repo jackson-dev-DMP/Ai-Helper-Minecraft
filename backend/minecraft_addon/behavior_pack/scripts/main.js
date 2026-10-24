@@ -1,10 +1,10 @@
 import { world, system } from "@minecraft/server";
 import { http, HttpRequest, HttpHeader } from "@minecraft/server-net";
 
-// Replace this with your actual free cloud backend URL once deployed (e.g., Render/Railway)
+// REPLACE this with your deployed Render backend URL
 const BACKEND_URL = "https://your-backend-app.onrender.com/api/companion/interact";
 
-// Unique session code for your world (change this if you start a new world!)
+// Unique session code for your world
 const WORLD_SESSION_CODE = "WORLD_FRANCE_01"; 
 
 world.afterEvents.chatSend.subscribe(async (event) => {
@@ -24,15 +24,13 @@ world.afterEvents.chatSend.subscribe(async (event) => {
                 z: Math.floor(loc.z)
             };
             
-            // Get player health component if available
             const healthComponent = player.getComponent("health");
             const currentHealth = healthComponent ? healthComponent.currentValue : 20;
 
-            // 2. Simple radar scan for nearby blocks around the player
+            // 2. Radar scan for nearby blocks
             let nearbyBlocks = [];
             const dimension = player.dimension;
             
-            // Scan a small 3x3x3 area around the player's feet/head
             for (let dx = -1; dx <= 1; dx++) {
                 for (let dy = -1; dy <= 2; dy++) {
                     for (let dz = -1; dz <= 1; dz++) {
@@ -40,26 +38,23 @@ world.afterEvents.chatSend.subscribe(async (event) => {
                         try {
                             const block = dimension.getBlock(checkPos);
                             if (block && block.typeId !== "minecraft:air") {
-                                // Clean up the name (e.g., "minecraft:diamond_ore" -> "diamond_ore")
                                 const blockName = block.typeId.replace("minecraft:", "");
                                 if (!nearbyBlocks.includes(blockName)) {
                                     nearbyBlocks.push(blockName);
                                 }
                             }
-                        } catch (e) {
-                            // Ignore out-of-bounds or chunk loading issues
-                        }
+                        } catch (e) {}
                     }
                 }
             }
 
-            // 3. Scan for nearby entities (mobs/players) in a 6-block radius
+            // 3. Scan for nearby mobs
             let nearbyMobs = [];
             try {
                 const entities = dimension.getEntities({
                     location: player.location,
                     maxDistance: 6,
-                    excludeFamilies: ["player"] // Focus on monsters/animals
+                    excludeFamilies: ["player"]
                 });
                 
                 for (const entity of entities) {
@@ -68,11 +63,9 @@ world.afterEvents.chatSend.subscribe(async (event) => {
                         nearbyMobs.push(mobName);
                     }
                 }
-            } catch (e) {
-                // Ignore entity query errors if any
-            }
+            } catch (e) {}
 
-            // 4. Build the rich JSON payload matching our FastAPI backend
+            // 4. Build JSON payload
             const payload = JSON.stringify({
                 session_code: WORLD_SESSION_CODE,
                 player_name: player.name,
@@ -81,13 +74,13 @@ world.afterEvents.chatSend.subscribe(async (event) => {
                 environment: {
                     position: playerPos,
                     health: currentHealth,
-                    nearby_blocks: nearbyBlocks.slice(0, 10), // Limit list size for speed
+                    nearby_blocks: nearbyBlocks.slice(0, 10),
                     nearby_mobs: nearbyMobs,
-                    inventory: [] // We can expand inventory reading later if needed!
+                    inventory: []
                 }
             });
 
-            // 5. Send HTTP POST request to your Python backend
+            // 5. Send HTTP POST request
             const request = new HttpRequest(BACKEND_URL);
             request.method = "POST";
             request.body = payload;
@@ -99,7 +92,6 @@ world.afterEvents.chatSend.subscribe(async (event) => {
             
             if (response.status === 200) {
                 const data = JSON.parse(response.body);
-                // Print Gemini's tactical response right into the Minecraft chat!
                 world.sendMessage(`§a[AI Companion]§r ${data.ai_response}`);
             } else {
                 player.sendMessage(`§c[AI Error]§r Server returned status ${response.status}`);
@@ -110,4 +102,4 @@ world.afterEvents.chatSend.subscribe(async (event) => {
         }
     }
 });
-                            
+        
