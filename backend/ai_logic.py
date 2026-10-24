@@ -2,7 +2,8 @@ import os
 from google import genai
 from google.genai import types
 
-client = genai.Client()
+# Explicitly pull the API key from the environment variables
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 def ask_ai_companion(prompt: str) -> str:
     """
