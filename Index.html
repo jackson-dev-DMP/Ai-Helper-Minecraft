@@ -117,7 +117,7 @@
     </div>
 
     <script>
-        // REPLACE with your live Render backend URL once deployed
+        // REPLACE with your live Render backend URL once deployed (e.g. https://your-app.onrender.com)
         const BACKEND_URL = "https://your-backend-app.onrender.com";
 
         async function fetchWorldState() {
@@ -178,10 +178,8 @@
             }
         }
 
-        // Auto-refresh data every 5 seconds so your dashboard updates live as you play!
+        // Auto-refresh data every 5 seconds
         setInterval(fetchWorldState, 5000);
-        
-        // Initial fetch
         fetchWorldState();
     </script>
 </body>
