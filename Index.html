@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft AI Companion Live Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        h1 { color: #4CAF50; text-align: center; }
+        .status-box, .log-box {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border-left: 5px solid #4CAF50;
+        }
+        .log-box {
+            height: 250px;
+            overflow-y: auto;
+            font-family: monospace;
+            color: #a6e22e;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        button:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Minecraft AI Companion Monitor</h1>
+        
+        <div class="status-box">
+            <h3>Backend Status: <span id="server-status" style="color: orange;">Checking...</span></h3>
+            <p><strong>Current Goal:</strong> <span id="ai-goal">Waiting for activity in Minecraft...</span></p>
+        </div>
+
+        <h3>Live World Feed & AI Vision Log</h3>
+        <div class="log-box" id="log-container">
+            [System] Dashboard initialized. Waiting for connection to backend...
+        </div>
+
+        <button onclick="checkBackendStatus()">Refresh Status</button>
+    </div>
+
+    <script>
+        // Replace with your actual free cloud backend URL once deployed
+        const BACKEND_URL = "https://your-backend-app.onrender.com";
+
+        async function checkBackendStatus() {
+            const statusEl = document.getElementById("server-status");
+            const logContainer = document.getElementById("log-container");
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusEl.innerText = "Online & Connected";
+                    statusEl.style.color = "#4CAF50";
+                    logContainer.innerHTML += `<br>[${new Date().toLocaleTimeString()}] Connected to backend: ${data.status}`;
+                } else {
+                    statusEl.innerText = "Error Responding";
+                    statusEl.style.color = "red";
+                }
+            } catch (error) {
+                statusEl.innerText = "Offline (Check URL)";
+                statusEl.style.color = "red";
+                logContainer.innerHTML += `<br>[${new Date().toLocaleTimeString()}] Failed to reach backend.`;
+            }
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Run status check on load
+        checkBackendStatus();
+    </script>
+</body>
+</html>
