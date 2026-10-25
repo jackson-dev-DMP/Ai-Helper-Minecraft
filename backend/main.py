@@ -343,4 +343,5 @@ def chat_with_companion(req: CompanionRequest):
         "reply": result["reply"],
         "tokens_used": result["tokens_used"]
 }
+
     
