@@ -8,6 +8,8 @@ app = FastAPI(title="Minecraft Allay AI Companion Lobby Terminal")
 class CompanionRequest(BaseModel):
     prompt: str
     lobby_code: str = "ALLAY-101"
+    custom_api_key: str = ""
+    gamertag: str = ""
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
@@ -15,7 +17,7 @@ def read_root():
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Allay AI Companion // Lobby & Token Terminal</title>
+    <title>Allay AI Companion // Multi-User Lobby Terminal</title>
     <style>
         :root {
             --bg-main: #0d1117;
@@ -25,6 +27,7 @@ def read_root():
             --accent-glow: #55cdfc;
             --accent-warning: #d29922;
             --accent-danger: #f85149;
+            --accent-dev: #a371f7;
             --text-main: #c9d1d9;
             --text-dim: #8b949e;
         }
@@ -39,75 +42,103 @@ def read_root():
             box-sizing: border-box;
             gap: 15px;
         }
-        .sidebar-left { width: 25%; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; }
-        .main-console { width: 50%; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
-        .sidebar-right { width: 25%; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; }
-        h2, h3 { margin-top: 0; color: #fff; font-size: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
-        .badge { background: #21262d; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; color: var(--accent-glow); }
-        .log-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 10px; color: var(--text-dim); }
-        .log-item.active { color: #fff; font-weight: bold; }
-        .profile-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-        .terminal-output { flex-grow: 1; background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; margin: 15px 0; overflow-y: auto; font-family: monospace; white-space: pre-wrap; font-size: 0.95rem; color: #7ee787; }
-        .input-box { display: flex; gap: 10px; align-items: center; background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; }
-        .input-box input { flex-grow: 1; background: transparent; border: none; color: #fff; font-size: 1rem; outline: none; }
-        .send-btn { background: var(--accent-green); color: #fff; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        .send-btn:hover { background: #2ea043; }
-        .lobby-control { background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 15px; }
-        .lobby-control input { width: 100%; background: #161b22; border: 1px solid var(--border-color); color: #fff; padding: 6px; border-radius: 4px; margin-top: 5px; box-sizing: border-box; }
-        .token-meter-container { background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 15px; }
-        .progress-bar-bg { background: #21262d; border-radius: 4px; height: 10px; width: 100%; margin-top: 8px; overflow: hidden; }
-        .progress-bar-fill { background: var(--accent-green); height: 100%; width: 0%; transition: width 0.4s ease, background-color 0.4s ease; }
-        .token-status-text { font-size: 0.8rem; margin-top: 6px; color: var(--text-dim); font-weight: bold; }
-        .skill-card { background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; font-size: 0.85rem; margin-bottom: 10px; }
+        .sidebar-left { width: 28%; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; gap: 12px; }
+        .main-console { width: 44%; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        .sidebar-right { width: 28%; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; gap: 12px; }
+        
+        h2, h3 { margin: 0 0 5px 0; color: #fff; font-size: 0.95rem; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+        .badge { background: #21262d; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; color: var(--accent-glow); font-weight: bold; }
+        .badge-dev { background: rgba(163, 113, 247, 0.15); border: 1px solid var(--accent-dev); color: var(--accent-dev); }
+        
+        .control-group { background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; }
+        .control-group label { font-size: 0.75rem; color: var(--text-dim); display: block; margin-bottom: 4px; }
+        .control-group input, .control-group select { width: 100%; background: #161b22; border: 1px solid var(--border-color); color: #fff; padding: 6px; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem; outline: none; }
+        
+        .btn { background: var(--accent-green); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 6px; font-size: 0.85rem; }
+        .btn:hover { background: #2ea043; }
+        .btn-dev { background: var(--accent-dev); }
+        .btn-dev:hover { background: #8957e5; }
+
+        .terminal-output { flex-grow: 1; background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; margin: 10px 0; overflow-y: auto; font-family: monospace; white-space: pre-wrap; font-size: 0.9rem; color: #7ee787; }
+        .input-box { display: flex; gap: 8px; align-items: center; background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px; }
+        .input-box input { flex-grow: 1; background: transparent; border: none; color: #fff; font-size: 0.9rem; outline: none; }
+        .send-btn { background: var(--accent-green); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+        
+        .token-meter-container { background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; }
+        .progress-bar-bg { background: #21262d; border-radius: 4px; height: 8px; width: 100%; margin-top: 6px; overflow: hidden; }
+        .progress-bar-fill { background: var(--accent-green); height: 100%; width: 0%; transition: width 0.4s ease; }
+        
+        .lobby-card { background: #161b22; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+        .request-card { background: rgba(210, 153, 34, 0.1); border: 1px solid var(--accent-warning); padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
+    <!-- Left Sidebar: Identity & Lobbies -->
     <div class="sidebar-left">
-        <h2>LOBBY CONTROL</h2>
-        <div class="lobby-control">
-            <label style="font-size: 0.8rem; color: var(--text-dim);">Active Lobby Code:</label>
-            <input type="text" id="lobbyCodeInput" value="ALLAY-101" placeholder="e.g. GEMINI-V1">
+        <h2>USER & LOBBY SETUP</h2>
+        <div class="control-group">
+            <label>Minecraft Gamertag:</label>
+            <input type="text" id="gamertagInput" value="jackson22510" oninput="checkDeveloperStatus()">
+            <div id="devBadgeContainer" style="margin-top: 6px;"></div>
         </div>
 
-        <h2>TOKEN ECONOMY</h2>
-        <div class="token-meter-container">
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                <span>Session Tokens:</span>
-                <span id="tokenCountText">0 / 5,000</span>
-            </div>
-            <div class="progress-bar-bg">
-                <div class="progress-bar-fill" id="tokenProgressBar"></div>
-            </div>
-            <div class="token-status-text" id="tokenStatusMsg">🟢 Status: Optimal Bandwidth</div>
+        <div class="control-group">
+            <label>Custom Gemini API Key (Optional):</label>
+            <input type="password" id="customApiKey" placeholder="Leave blank to use server key">
         </div>
-        <h2>SYSTEM LOG</h2>
-        <div class="log-item active">🟢 Model: Gemini 3.8 Flash</div>
-        <div class="log-item">🟢 Lobby Relay Active</div>
+
+        <h2>ACTIVE LOBBIES</h2>
+        <div class="control-group">
+            <label>Start / Host New Lobby Code:</label>
+            <input type="text" id="newLobbyCode" placeholder="e.g. SURVIVAL-01">
+            <button class="btn" onclick="startNewLobby()">Start Lobby</button>
+        </div>
+        <div id="activeLobbiesList" style="max-height: 120px; overflow-y: auto;">
+            <div class="lobby-card"><span><b>ALLAY-101</b> (Host: jackson22510)</span> <button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby('ALLAY-101')">Join</button></div>
+        </div>
     </div>
 
+    <!-- Main Console -->
     <div class="main-console">
         <div>
-            <div class="profile-header">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
                 <div>
-                    <span style="font-size: 1.2rem; font-weight: bold; color: #fff;">Allay Companion</span> 
+                    <span style="font-size: 1.1rem; font-weight: bold; color: #fff;">Allay Companion</span> 
                     <span class="badge" id="activeLobbyBadge">LOBBY: ALLAY-101</span>
                 </div>
-                <span style="font-size: 0.85rem; color: var(--text-dim);" id="connectionStatus">API: Connected</span>
+                <div id="headerStatusBadge"></div>
             </div>
         </div>
-        <div class="terminal-output" id="terminalOutput">System ready. Connected to Gemini 3.8 Flash via Lobby Relay. Set your custom code above and chat!</div>
+        <div class="terminal-output" id="terminalOutput">System ready. Enter your credentials, select your lobby, and begin chatting with Allay!</div>
         <div class="input-box">
             <input type="text" id="promptInput" placeholder="Send a message to Allay..." onkeydown="if(event.key === 'Enter') sendToAllay()">
             <button class="send-btn" onclick="sendToAllay()">▲</button>
         </div>
     </div>
 
+    <!-- Right Sidebar: Token Economy & Friend Requests -->
     <div class="sidebar-right">
-        <h2>CAPABILITIES</h2>
-        <div class="skill-card">
-            <b>⭐ lobby_relay_sync</b>
-            <div style="color: var(--text-dim); margin-top: 4px; font-size: 0.8rem;">
-                Synchronizes prompts across web terminal and Minecraft worlds using custom session lobby codes.
+        <h2>TOKEN ECONOMY</h2>
+        <div class="token-meter-container">
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                <span>Session Tokens:</span>
+                <span id="tokenCountText">0 / 5,000</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="tokenProgressBar"></div>
+            </div>
+            <div style="font-size: 0.75rem; margin-top: 4px; color: var(--text-dim);" id="tokenStatusMsg">🟢 Optimal Bandwidth</div>
+        </div>
+
+        <h2>MINECRAFT JOIN REQUESTS</h2>
+        <div id="minecraftRequestsContainer" style="font-size: 0.8rem; color: var(--text-dim);">
+            <div class="request-card">
+                <div><b>Friend:</b> Alex_Crafts</div>
+                <div>Wants to join lobby & spawn Guest Allay.</div>
+                <div style="display: flex; gap: 5px; margin-top: 5px;">
+                    <button class="btn" style="margin:0; padding:2px 6px;" onclick="approveRequest(this, true)">Accept in MC</button>
+                    <button class="btn" style="margin:0; padding:2px 6px; background:var(--accent-danger);" onclick="approveRequest(this, false)">Deny</button>
+                </div>
             </div>
         </div>
     </div>
@@ -115,36 +146,98 @@ def read_root():
     <script>
         let sessionTokens = 0;
         const maxTokenQuota = 5000;
+        let activeLobbies = ["ALLAY-101"];
+
+        window.onload = function() {
+            checkDeveloperStatus();
+        };
+
+        function checkDeveloperStatus() {
+            const gt = document.getElementById('gamertagInput').value.trim();
+            const badgeContainer = document.getElementById('devBadgeContainer');
+            const headerStatus = document.getElementById('headerStatusBadge');
+
+            if (gt.toLowerCase() === 'jackson22510') {
+                badgeContainer.innerHTML = '<span class="badge badge-dev">🚀 DEVELOPER LOBBY // ADMIN</span>';
+                headerStatus.innerHTML = '<span class="badge badge-dev">DEV MODE</span>';
+            } else {
+                badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-dim);">Standard User Mode</span>';
+                headerStatus.innerHTML = '<span class="badge">GUEST MODE</span>';
+            }
+        }
+
+        function startNewLobby() {
+            const codeInput = document.getElementById('newLobbyCode');
+            const code = codeInput.value.trim().toUpperCase();
+            if (!code) return;
+
+            if (!activeLobbies.includes(code)) {
+                activeLobbies.push(code);
+                updateLobbiesUI();
+            }
+            document.getElementById('activeLobbyBadge').innerText = "LOBBY: " + code;
+            codeInput.value = '';
+            document.getElementById('terminalOutput').innerText += `\\n[System]: Started and joined new lobby '${code}'!`;
+        }
+
+        function joinLobby(code) {
+            document.getElementById('activeLobbyBadge').innerText = "LOBBY: " + code;
+            document.getElementById('terminalOutput').innerText += `\\n[System]: Switched active session to lobby '${code}'.`;
+        }
+
+        function updateLobbiesUI() {
+            const listDiv = document.getElementById('activeLobbiesList');
+            listDiv.innerHTML = '';
+            activeLobbies.forEach(code => {
+                listDiv.innerHTML += `<div class="lobby-card"><span><b>${code}</b></span> <button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby('${code}')">Join</button></div>`;
+            });
+        }
+
+        function approveRequest(btnElement, accepted) {
+            const card = btnElement.closest('.request-card');
+            if (accepted) {
+                card.innerHTML = '<b style="color:var(--accent-green);">✔ Request Accepted in Minecraft & Web! Guest Allay spawned.</b>';
+            } else {
+                card.innerHTML = '<b style="color:var(--accent-danger);">✖ Request Denied by Host.</b>';
+            }
+        }
 
         async function sendToAllay() {
             const inputField = document.getElementById('promptInput');
-            const lobbyField = document.getElementById('lobbyCodeInput');
             const outputDiv = document.getElementById('terminalOutput');
-            const badge = document.getElementById('activeLobbyBadge');
-            
+            const lobbyBadge = document.getElementById('activeLobbyBadge');
+            const gtInput = document.getElementById('gamertagInput');
+            const apiKeyInput = document.getElementById('customApiKey');
+
             const text = inputField.value.trim();
-            const lobbyCode = lobbyField.value.trim() || "DEFAULT-LOBBY";
+            const currentLobby = lobbyBadge.innerText.replace("LOBBY: ", "");
+            const gamertag = gtInput.value.trim() || "Guest";
+            const customApiKey = apiKeyInput.value.trim();
+
             if (!text) return;
 
-            badge.innerText = "LOBBY: " + lobbyCode;
-
             if (sessionTokens >= maxTokenQuota) {
-                outputDiv.innerText += "\\n[WARNING]: Token quota nearly exhausted! High usage detected.\\n";
+                outputDiv.innerText += `\\n[WARNING]: Token quota exhausted! High usage detected. Please wait.\\n`;
                 return;
             }
 
-            outputDiv.innerText += "\\n> [" + lobbyCode + "] " + text + "\\n[Allay]: Querying relay...";
+            outputDiv.innerText += `\\n> [${gamertag}@${currentLobby}] ${text}\\n[Allay]: Querying Gemini...`;
             inputField.value = '';
 
             try {
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: text, lobby_code: lobbyCode })
+                    body: JSON.stringify({ 
+                        prompt: text, 
+                        lobby_code: currentLobby,
+                        custom_api_key: customApiKey,
+                        gamertag: gamertag
+                    })
                 });
                 const data = await res.json();
                 
-                outputDiv.innerText += "\\n[Allay]: " + data.reply + "\\n";
+                outputDiv.innerText += `\\n[Allay]: ${data.reply}\\n`;
                 outputDiv.scrollTop = outputDiv.scrollHeight;
 
                 if (data.tokens_used) {
@@ -152,7 +245,7 @@ def read_root():
                     updateTokenUI();
                 }
             } catch (err) {
-                outputDiv.innerText += "\\n[ERROR]: Failed to reach lobby relay backend.\\n";
+                outputDiv.innerText += `\\n[ERROR]: Failed to reach backend relay.\\n`;
             }
         }
 
@@ -163,7 +256,7 @@ def read_root():
             const statusMsg = document.getElementById('tokenStatusMsg');
 
             progressBar.style.width = percentage + '%';
-            tokenText.innerText = sessionTokens + ' / ' + maxTokenQuota;
+            tokenText.innerText = `${sessionTokens} / ${maxTokenQuota}`;
 
             if (percentage >= 85) {
                 progressBar.style.backgroundColor = 'var(--accent-danger)';
@@ -176,7 +269,7 @@ def read_root():
             } else {
                 progressBar.style.backgroundColor = 'var(--accent-green)';
                 statusMsg.style.color = 'var(--text-dim)';
-                statusMsg.innerText = '🟢 Status: Optimal Bandwidth';
+                statusMsg.innerText = '🟢 Optimal Bandwidth';
             }
         }
     </script>
@@ -186,7 +279,8 @@ def read_root():
 
 @app.post("/chat")
 def chat_with_companion(req: CompanionRequest):
-    result = ask_ai_companion(req.prompt, req.lobby_code)
+    # Pass user custom API key if provided, otherwise fallback to server environment key
+    result = ask_ai_companion(req.prompt, req.lobby_code, req.custom_api_key, req.gamertag)
     return {
         "reply": result["reply"],
         "tokens_used": result["tokens_used"]
