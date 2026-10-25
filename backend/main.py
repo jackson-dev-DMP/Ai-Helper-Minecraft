@@ -3,10 +3,11 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from ai_logic import ask_ai_companion
 
-app = FastAPI(title="Minecraft Allay AI Companion Terminal")
+app = FastAPI(title="Minecraft Allay AI Companion Lobby Terminal")
 
 class CompanionRequest(BaseModel):
     prompt: str
+    lobby_code: str = "ALLAY-101"
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
@@ -14,7 +15,7 @@ def read_root():
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Allay AI Companion // Token Economy Dashboard</title>
+    <title>Allay AI Companion // Lobby & Token Terminal</title>
     <style>
         :root {
             --bg-main: #0d1117;
@@ -51,6 +52,8 @@ def read_root():
         .input-box input { flex-grow: 1; background: transparent; border: none; color: #fff; font-size: 1rem; outline: none; }
         .send-btn { background: var(--accent-green); color: #fff; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         .send-btn:hover { background: #2ea043; }
+        .lobby-control { background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 15px; }
+        .lobby-control input { width: 100%; background: #161b22; border: 1px solid var(--border-color); color: #fff; padding: 6px; border-radius: 4px; margin-top: 5px; box-sizing: border-box; }
         .token-meter-container { background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 15px; }
         .progress-bar-bg { background: #21262d; border-radius: 4px; height: 10px; width: 100%; margin-top: 8px; overflow: hidden; }
         .progress-bar-fill { background: var(--accent-green); height: 100%; width: 0%; transition: width 0.4s ease, background-color 0.4s ease; }
@@ -60,6 +63,12 @@ def read_root():
 </head>
 <body>
     <div class="sidebar-left">
+        <h2>LOBBY CONTROL</h2>
+        <div class="lobby-control">
+            <label style="font-size: 0.8rem; color: var(--text-dim);">Active Lobby Code:</label>
+            <input type="text" id="lobbyCodeInput" value="ALLAY-101" placeholder="e.g. GEMINI-V1">
+        </div>
+
         <h2>TOKEN ECONOMY</h2>
         <div class="token-meter-container">
             <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
@@ -73,8 +82,7 @@ def read_root():
         </div>
         <h2>SYSTEM LOG</h2>
         <div class="log-item active">🟢 Model: Gemini 3.8 Flash</div>
-        <div class="log-item">🟢 Web Dashboard Synced</div>
-        <div class="log-item">⚪ Minecraft Bedrock Listener</div>
+        <div class="log-item">🟢 Lobby Relay Active</div>
     </div>
 
     <div class="main-console">
@@ -82,12 +90,12 @@ def read_root():
             <div class="profile-header">
                 <div>
                     <span style="font-size: 1.2rem; font-weight: bold; color: #fff;">Allay Companion</span> 
-                    <span class="badge">GEMINI 3.8 FLASH</span>
+                    <span class="badge" id="activeLobbyBadge">LOBBY: ALLAY-101</span>
                 </div>
                 <span style="font-size: 0.85rem; color: var(--text-dim);" id="connectionStatus">API: Connected</span>
             </div>
         </div>
-        <div class="terminal-output" id="terminalOutput">System ready. Connected to Gemini 3.8 Flash. Type your prompt below or use 'Gemini <message>' in Minecraft!</div>
+        <div class="terminal-output" id="terminalOutput">System ready. Connected to Gemini 3.8 Flash via Lobby Relay. Set your custom code above and chat!</div>
         <div class="input-box">
             <input type="text" id="promptInput" placeholder="Send a message to Allay..." onkeydown="if(event.key === 'Enter') sendToAllay()">
             <button class="send-btn" onclick="sendToAllay()">▲</button>
@@ -97,9 +105,9 @@ def read_root():
     <div class="sidebar-right">
         <h2>CAPABILITIES</h2>
         <div class="skill-card">
-            <b>⭐ gemini_38_tactical_guide</b>
+            <b>⭐ lobby_relay_sync</b>
             <div style="color: var(--text-dim); margin-top: 4px; font-size: 0.8rem;">
-                Powered by Gemini 3.8 Flash. Low-latency multi-turn guidance optimized for Minecraft survival engineering.
+                Synchronizes prompts across web terminal and Minecraft worlds using custom session lobby codes.
             </div>
         </div>
     </div>
@@ -110,23 +118,29 @@ def read_root():
 
         async function sendToAllay() {
             const inputField = document.getElementById('promptInput');
+            const lobbyField = document.getElementById('lobbyCodeInput');
             const outputDiv = document.getElementById('terminalOutput');
+            const badge = document.getElementById('activeLobbyBadge');
+            
             const text = inputField.value.trim();
+            const lobbyCode = lobbyField.value.trim() || "DEFAULT-LOBBY";
             if (!text) return;
 
+            badge.innerText = "LOBBY: " + lobbyCode;
+
             if (sessionTokens >= maxTokenQuota) {
-                outputDiv.innerText += "\\n[WARNING]: Token quota nearly exhausted! High usage detected. Please wait.\\n";
+                outputDiv.innerText += "\\n[WARNING]: Token quota nearly exhausted! High usage detected.\\n";
                 return;
             }
 
-            outputDiv.innerText += "\\n> " + text + "\\n[Allay]: Querying Gemini 3.8 Flash...";
+            outputDiv.innerText += "\\n> [" + lobbyCode + "] " + text + "\\n[Allay]: Querying relay...";
             inputField.value = '';
 
             try {
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: text })
+                    body: JSON.stringify({ prompt: text, lobby_code: lobbyCode })
                 });
                 const data = await res.json();
                 
@@ -138,7 +152,7 @@ def read_root():
                     updateTokenUI();
                 }
             } catch (err) {
-                outputDiv.innerText += "\\n[ERROR]: Failed to reach cloud backend.\\n";
+                outputDiv.innerText += "\\n[ERROR]: Failed to reach lobby relay backend.\\n";
             }
         }
 
@@ -154,7 +168,7 @@ def read_root():
             if (percentage >= 85) {
                 progressBar.style.backgroundColor = 'var(--accent-danger)';
                 statusMsg.style.color = 'var(--accent-danger)';
-                statusMsg.innerText = '🔴 HIGH USAGE: Please wait/throttle requests!';
+                statusMsg.innerText = '🔴 HIGH USAGE: Throttle requests!';
             } else if (percentage >= 60) {
                 progressBar.style.backgroundColor = 'var(--accent-warning)';
                 statusMsg.style.color = 'var(--accent-warning)';
@@ -172,7 +186,7 @@ def read_root():
 
 @app.post("/chat")
 def chat_with_companion(req: CompanionRequest):
-    result = ask_ai_companion(req.prompt)
+    result = ask_ai_companion(req.prompt, req.lobby_code)
     return {
         "reply": result["reply"],
         "tokens_used": result["tokens_used"]
