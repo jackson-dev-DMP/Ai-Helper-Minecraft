@@ -14,7 +14,7 @@ class CompanionRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
-    html_content = """<!DOCTYPE html>
+    html_part_1 = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -112,7 +112,9 @@ def read_root():
             </div>
         </div>
     </div>
+"""
 
+    html_part_2 = """
     <div class="main-console">
         <div>
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
@@ -167,7 +169,9 @@ def read_root():
             </div>
         </div>
     </div>
+"""
 
+    html_part_3 = """
     <script>
         let sessionTokens = 0;
         const maxTokenQuota = 5000;
@@ -358,6 +362,4 @@ def read_root():
                         lobby_code: currentLobby,
                         custom_api_key: customApiKey,
                         gamertag: gamertag,
-                        dev_password: devPassword
-                    })
-                }
+                        dev_password: d
