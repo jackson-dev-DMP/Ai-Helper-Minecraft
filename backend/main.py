@@ -10,6 +10,7 @@ class CompanionRequest(BaseModel):
     lobby_code: str = "ALLAY-101"
     custom_api_key: str = ""
     gamertag: str = ""
+    dev_password: str = ""
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
@@ -17,7 +18,7 @@ def read_root():
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Allay AI Companion // Multi-User Lobby Terminal</title>
+    <title>Allay AI Companion // Secure Lobby Terminal</title>
     <style>
         :root {
             --bg-main: #0d1117;
@@ -56,6 +57,8 @@ def read_root():
         
         .btn { background: var(--accent-green); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 6px; font-size: 0.85rem; }
         .btn:hover { background: #2ea043; }
+        .btn-danger { background: var(--accent-danger); }
+        .btn-danger:hover { background: #da3633; }
         .btn-dev { background: var(--accent-dev); }
         .btn-dev:hover { background: #8957e5; }
 
@@ -75,10 +78,14 @@ def read_root():
 <body>
     <!-- Left Sidebar: Identity & Lobbies -->
     <div class="sidebar-left">
-        <h2>USER & LOBBY SETUP</h2>
+        <h2>USER & SECURITY</h2>
         <div class="control-group">
             <label>Minecraft Gamertag:</label>
             <input type="text" id="gamertagInput" value="jackson22510" oninput="checkDeveloperStatus()">
+            <div id="devPasswordContainer" style="margin-top: 6px;">
+                <label>Dev Password (Jackson140715):</label>
+                <input type="password" id="devPasswordInput" placeholder="Enter password..." oninput="checkDeveloperStatus()">
+            </div>
             <div id="devBadgeContainer" style="margin-top: 6px;"></div>
         </div>
 
@@ -93,8 +100,14 @@ def read_root():
             <input type="text" id="newLobbyCode" placeholder="e.g. SURVIVAL-01">
             <button class="btn" onclick="startNewLobby()">Start Lobby</button>
         </div>
-        <div id="activeLobbiesList" style="max-height: 120px; overflow-y: auto;">
-            <div class="lobby-card"><span><b>ALLAY-101</b> (Host: jackson22510)</span> <button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby('ALLAY-101')">Join</button></div>
+        <div id="activeLobbiesList" style="max-height: 140px; overflow-y: auto;">
+            <div class="lobby-card">
+                <span><b>ALLAY-101</b></span>
+                <div style="display: flex; gap: 4px;">
+                    <button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby('ALLAY-101')">Join</button>
+                    <button class="btn btn-danger" style="width: auto; padding: 2px 6px; margin:0; display:none;" id="del-ALLAY-101" onclick="deleteLobby('ALLAY-101')">Delete</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -109,14 +122,14 @@ def read_root():
                 <div id="headerStatusBadge"></div>
             </div>
         </div>
-        <div class="terminal-output" id="terminalOutput">System ready. Enter your credentials, select your lobby, and begin chatting with Allay!</div>
+        <div class="terminal-output" id="terminalOutput">System ready. Enter your credentials, verify your dev key, and command your Allay network!</div>
         <div class="input-box">
             <input type="text" id="promptInput" placeholder="Send a message to Allay..." onkeydown="if(event.key === 'Enter') sendToAllay()">
             <button class="send-btn" onclick="sendToAllay()">▲</button>
         </div>
     </div>
 
-    <!-- Right Sidebar: Token Economy & Friend Requests -->
+    <!-- Right Sidebar: Token Economy & Requests Management -->
     <div class="sidebar-right">
         <h2>TOKEN ECONOMY</h2>
         <div class="token-meter-container">
@@ -130,14 +143,18 @@ def read_root():
             <div style="font-size: 0.75rem; margin-top: 4px; color: var(--text-dim);" id="tokenStatusMsg">🟢 Optimal Bandwidth</div>
         </div>
 
-        <h2>MINECRAFT JOIN REQUESTS</h2>
-        <div id="minecraftRequestsContainer" style="font-size: 0.8rem; color: var(--text-dim);">
+        <h2>INCOMING REQUESTS</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.75rem; color: var(--text-dim);">Queue Control:</span>
+            <button class="btn btn-danger" style="width: auto; padding: 2px 6px; margin:0; font-size:0.75rem;" onclick="cancelAllRequests()">Cancel All</button>
+        </div>
+        <div id="minecraftRequestsContainer" style="font-size: 0.8rem; color: var(--text-dim); max-height: 200px; overflow-y: auto;">
             <div class="request-card">
-                <div><b>Friend:</b> Alex_Crafts</div>
+                <div><b>Friend:</b> TEST</div>
                 <div>Wants to join lobby & spawn Guest Allay.</div>
                 <div style="display: flex; gap: 5px; margin-top: 5px;">
-                    <button class="btn" style="margin:0; padding:2px 6px;" onclick="approveRequest(this, true)">Accept in MC</button>
-                    <button class="btn" style="margin:0; padding:2px 6px; background:var(--accent-danger);" onclick="approveRequest(this, false)">Deny</button>
+                    <button class="btn" style="margin:0; padding:2px 6px;" onclick="approveRequest(this, true)">Accept</button>
+                    <button class="btn btn-danger" style="margin:0; padding:2px 6px;" onclick="approveRequest(this, false)">Deny</button>
                 </div>
             </div>
         </div>
@@ -147,23 +164,37 @@ def read_root():
         let sessionTokens = 0;
         const maxTokenQuota = 5000;
         let activeLobbies = ["ALLAY-101"];
+        let isDevAuthenticated = false;
 
         window.onload = function() {
             checkDeveloperStatus();
         };
 
         function checkDeveloperStatus() {
-            const gt = document.getElementById('gamertagInput').value.trim();
+            const gt = document.getElementById('gamertagInput').value.trim().toLowerCase();
+            const pass = document.getElementById('devPasswordInput').value.trim();
             const badgeContainer = document.getElementById('devBadgeContainer');
             const headerStatus = document.getElementById('headerStatusBadge');
+            const passContainer = document.getElementById('devPasswordContainer');
 
-            if (gt.toLowerCase() === 'jackson22510') {
-                badgeContainer.innerHTML = '<span class="badge badge-dev">🚀 DEVELOPER LOBBY // ADMIN</span>';
-                headerStatus.innerHTML = '<span class="badge badge-dev">DEV MODE</span>';
+            if (gt === 'jackson22510') {
+                passContainer.style.display = 'block';
+                if (pass === 'Jackson140715') {
+                    isDevAuthenticated = true;
+                    badgeContainer.innerHTML = '<span class="badge badge-dev">🚀 DEV ADMIN (UNLOCKED)</span>';
+                    headerStatus.innerHTML = '<span class="badge badge-dev">ROOT ADMIN</span>';
+                } else {
+                    isDevAuthenticated = false;
+                    badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--accent-warning);">⚠️ Enter Dev Password (Jackson140715)</span>';
+                    headerStatus.innerHTML = '<span class="badge">PENDING AUTH</span>';
+                }
             } else {
+                isDevAuthenticated = false;
+                passContainer.style.display = 'none';
                 badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-dim);">Standard User Mode</span>';
                 headerStatus.innerHTML = '<span class="badge">GUEST MODE</span>';
             }
+            updateLobbiesUI();
         }
 
         function startNewLobby() {
@@ -177,7 +208,7 @@ def read_root():
             }
             document.getElementById('activeLobbyBadge').innerText = "LOBBY: " + code;
             codeInput.value = '';
-            document.getElementById('terminalOutput').innerText += `\\n[System]: Started and joined new lobby '${code}'!`;
+            document.getElementById('terminalOutput').innerText += `\\n[System]: Created & joined lobby '${code}'!`;
         }
 
         function joinLobby(code) {
@@ -185,20 +216,45 @@ def read_root():
             document.getElementById('terminalOutput').innerText += `\\n[System]: Switched active session to lobby '${code}'.`;
         }
 
+        function deleteLobby(code) {
+            if (!isDevAuthenticated) {
+                alert("Access Denied: Only Dev Admin (jackson22510 with password) can delete lobbies!");
+                return;
+            }
+            activeLobbies = activeLobbies.filter(l => l !== code);
+            if (activeLobbies.length === 0) activeLobbies.push("DEFAULT-LOBBY");
+            updateLobbiesUI();
+            document.getElementById('terminalOutput').innerText += `\\n[Admin]: Lobby '${code}' permanently deleted by Developer!`;
+        }
+
+        function cancelAllRequests() {
+            const container = document.getElementById('minecraftRequestsContainer');
+            container.innerHTML = '<div style="font-size:0.75rem; color:var(--text-dim); text-align:center; padding:10px;">All incoming requests cancelled.</div>';
+            document.getElementById('terminalOutput').innerText += `\\n[Admin]: Incoming request queue cleared/cancelled.`;
+        }
+
         function updateLobbiesUI() {
             const listDiv = document.getElementById('activeLobbiesList');
             listDiv.innerHTML = '';
             activeLobbies.forEach(code => {
-                listDiv.innerHTML += `<div class="lobby-card"><span><b>${code}</b></span> <button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby('${code}')">Join</button></div>`;
+                const deleteBtnHtml = isDevAuthenticated ? `<button class="btn btn-danger" style="width: auto; padding: 2px 6px; margin:0;" onclick="deleteLobby('${code}')">Delete</button>` : '';
+                listDiv.innerHTML += `
+                    <div class="lobby-card">
+                        <span><b>${code}</b></span> 
+                        <div style="display: flex; gap: 4px;">
+                            <button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby('${code}')">Join</button>
+                            ${deleteBtnHtml}
+                        </div>
+                    </div>`;
             });
         }
 
         function approveRequest(btnElement, accepted) {
             const card = btnElement.closest('.request-card');
             if (accepted) {
-                card.innerHTML = '<b style="color:var(--accent-green);">✔ Request Accepted in Minecraft & Web! Guest Allay spawned.</b>';
+                card.innerHTML = '<b style="color:var(--accent-green);">✔ Accepted in MC & Web. Guest Allay deployed!</b>';
             } else {
-                card.innerHTML = '<b style="color:var(--accent-danger);">✖ Request Denied by Host.</b>';
+                card.innerHTML = '<b style="color:var(--accent-danger);">✖ Request Denied.</b>';
             }
         }
 
@@ -207,17 +263,19 @@ def read_root():
             const outputDiv = document.getElementById('terminalOutput');
             const lobbyBadge = document.getElementById('activeLobbyBadge');
             const gtInput = document.getElementById('gamertagInput');
+            const passInput = document.getElementById('devPasswordInput');
             const apiKeyInput = document.getElementById('customApiKey');
 
             const text = inputField.value.trim();
             const currentLobby = lobbyBadge.innerText.replace("LOBBY: ", "");
             const gamertag = gtInput.value.trim() || "Guest";
+            const devPassword = passInput.value.trim();
             const customApiKey = apiKeyInput.value.trim();
 
             if (!text) return;
 
             if (sessionTokens >= maxTokenQuota) {
-                outputDiv.innerText += `\\n[WARNING]: Token quota exhausted! High usage detected. Please wait.\\n`;
+                outputDiv.innerText += `\\n[WARNING]: Token quota exhausted! Please wait.\\n`;
                 return;
             }
 
@@ -232,7 +290,8 @@ def read_root():
                         prompt: text, 
                         lobby_code: currentLobby,
                         custom_api_key: customApiKey,
-                        gamertag: gamertag
+                        gamertag: gamertag,
+                        dev_password: devPassword
                     })
                 });
                 const data = await res.json();
@@ -279,8 +338,7 @@ def read_root():
 
 @app.post("/chat")
 def chat_with_companion(req: CompanionRequest):
-    # Pass user custom API key if provided, otherwise fallback to server environment key
-    result = ask_ai_companion(req.prompt, req.lobby_code, req.custom_api_key, req.gamertag)
+    result = ask_ai_companion(req.prompt, req.lobby_code, req.custom_api_key, req.gamertag, req.dev_password)
     return {
         "reply": result["reply"],
         "tokens_used": result["tokens_used"]
