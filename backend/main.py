@@ -3,11 +3,11 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from ai_logic import ask_ai_companion
 
-app = FastAPI(title="Minecraft Allay AI Companion Lobby Terminal")
+app = FastAPI(title="Minecraft Allay AI Companion Lobby Terminal v1.5 (BETA)")
 
 class CompanionRequest(BaseModel):
     prompt: str
-    lobby_code: str = "ALLAY-101"
+    lobby_code: str = "Default-Lobby"
     custom_api_key: str = ""
     gamertag: str = ""
     dev_password: str = ""
@@ -18,7 +18,7 @@ def read_root():
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Allay AI Companion // Secure Lobby Terminal</title>
+    <title>Allay AI Companion // Secure Terminal v1.5 (BETA)</title>
     <style>
         :root {
             --bg-main: #0d1117;
@@ -55,7 +55,7 @@ def read_root():
         .control-group label { font-size: 0.75rem; color: var(--text-dim); display: block; margin-bottom: 4px; }
         .control-group input, .control-group select { width: 100%; background: #161b22; border: 1px solid var(--border-color); color: #fff; padding: 6px; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem; outline: none; }
         
-        .btn { background: var(--accent-green); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 6px; font-size: 0.85rem; }
+        .btn { background: var(--accent-green); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 6px; font-size: 0.85rem; transition: background 0.2s; }
         .btn:hover { background: #2ea043; }
         .btn-danger { background: var(--accent-danger); }
         .btn-danger:hover { background: #da3633; }
@@ -71,18 +71,21 @@ def read_root():
         .progress-bar-bg { background: #21262d; border-radius: 4px; height: 8px; width: 100%; margin-top: 6px; overflow: hidden; }
         .progress-bar-fill { background: var(--accent-green); height: 100%; width: 0%; transition: width 0.4s ease; }
         
-        .lobby-card { background: #161b22; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+        .lobby-card { background: #161b22; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s ease; }
+        .lobby-card-dev { background: rgba(163, 113, 247, 0.15); border: 1px solid var(--accent-dev); }
         .request-card { background: rgba(210, 153, 34, 0.1); border: 1px solid var(--accent-warning); padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 0.8rem; }
+        .player-item { background: #161b22; border: 1px solid var(--border-color); padding: 5px 8px; border-radius: 4px; margin-bottom: 4px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+        .player-item-dev { border: 1px solid var(--accent-dev); color: var(--accent-dev); font-weight: bold; }
     </style>
 </head>
 <body>
     <!-- Left Sidebar: Identity & Lobbies -->
     <div class="sidebar-left">
-        <h2>USER & SECURITY</h2>
+        <h2>USER & SECURITY v1.5</h2>
         <div class="control-group">
             <label>Minecraft Gamertag:</label>
-            <input type="text" id="gamertagInput" value="jackson22510" oninput="checkDeveloperStatus()">
-            <div id="devPasswordContainer" style="margin-top: 6px;">
+            <input type="text" id="gamertagInput" value="" placeholder="Enter your gamertag..." oninput="checkDeveloperStatus()">
+            <div id="devPasswordContainer" style="margin-top: 6px; display: none;">
                 <label>Developer Password:</label>
                 <input type="password" id="devPasswordInput" placeholder="Enter secure password..." oninput="checkDeveloperStatus()">
             </div>
@@ -96,16 +99,16 @@ def read_root():
 
         <h2>ACTIVE LOBBIES</h2>
         <div class="control-group">
-            <label>Start / Host New Lobby Code:</label>
-            <input type="text" id="newLobbyCode" placeholder="e.g. SURVIVAL-01">
+            <label>Start / Host New Lobby:</label>
+            <input type="text" id="newLobbyCode" placeholder="e.g. SurvivalRoom">
             <button class="btn" onclick="startNewLobby()">Start Lobby</button>
         </div>
         <div id="activeLobbiesList" style="max-height: 140px; overflow-y: auto;">
             <div class="lobby-card">
-                <span><b>ALLAY-101</b></span>
+                <span><b>Default-Lobby</b></span>
                 <div style="display: flex; gap: 4px;">
-                    <button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby('ALLAY-101')">Join</button>
-                    <button class="btn btn-danger" style="width: auto; padding: 2px 6px; margin:0; display:none;" id="del-ALLAY-101" onclick="deleteLobby('ALLAY-101')">Delete</button>
+                    <button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby('Default-Lobby')">Join</button>
+                    <button class="btn btn-danger" style="width: auto; padding: 2px 6px; margin:0; display:none;" id="del-Default-Lobby" onclick="deleteLobby('Default-Lobby')">Delete</button>
                 </div>
             </div>
         </div>
@@ -116,21 +119,26 @@ def read_root():
         <div>
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
                 <div>
-                    <span style="font-size: 1.1rem; font-weight: bold; color: #fff;">Allay Companion</span> 
-                    <span class="badge" id="activeLobbyBadge">LOBBY: ALLAY-101</span>
+                    <span style="font-size: 1.1rem; font-weight: bold; color: #fff;">Allay Companion v1.5 (BETA)</span> 
+                    <span class="badge" id="activeLobbyBadge">LOBBY: Default-Lobby</span>
                 </div>
                 <div id="headerStatusBadge"></div>
             </div>
         </div>
-        <div class="terminal-output" id="terminalOutput">System ready. Enter your credentials and command your Allay network securely!</div>
+        <div class="terminal-output" id="terminalOutput">[00:00:01] System v1.5 (BETA) ready. Enter your gamertag to begin chatting in Default-Lobby!</div>
         <div class="input-box">
             <input type="text" id="promptInput" placeholder="Send a message to Allay..." onkeydown="if(event.key === 'Enter') sendToAllay()">
             <button class="send-btn" onclick="sendToAllay()">▲</button>
         </div>
     </div>
 
-    <!-- Right Sidebar: Token Economy & Requests Management -->
+    <!-- Right Sidebar: Players, Token Economy & Requests -->
     <div class="sidebar-right">
+        <h2>PLAYERS IN LOBBY</h2>
+        <div id="playersListContainer" style="max-height: 120px; overflow-y: auto; margin-bottom: 10px;">
+            <div class="player-item"><span>No active players</span></div>
+        </div>
+
         <h2>TOKEN ECONOMY</h2>
         <div class="token-meter-container">
             <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
@@ -140,7 +148,10 @@ def read_root():
             <div class="progress-bar-bg">
                 <div class="progress-bar-fill" id="tokenProgressBar"></div>
             </div>
-            <div style="font-size: 0.75rem; margin-top: 4px; color: var(--text-dim);" id="tokenStatusMsg">🟢 Optimal Bandwidth</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                <span style="font-size: 0.75rem; color: var(--text-dim);" id="tokenStatusMsg">🟢 Optimal Bandwidth</span>
+                <button class="btn" style="width: auto; margin:0; padding:2px 6px; font-size:0.7rem;" onclick="resetTokens()">Reset</button>
+            </div>
         </div>
 
         <h2>INCOMING REQUESTS</h2>
@@ -148,7 +159,7 @@ def read_root():
             <span style="font-size: 0.75rem; color: var(--text-dim);">Queue Control:</span>
             <button class="btn btn-danger" style="width: auto; padding: 2px 6px; margin:0; font-size:0.75rem;" onclick="cancelAllRequests()">Cancel All</button>
         </div>
-        <div id="minecraftRequestsContainer" style="font-size: 0.8rem; color: var(--text-dim); max-height: 200px; overflow-y: auto;">
+        <div id="minecraftRequestsContainer" style="font-size: 0.8rem; color: var(--text-dim); max-height: 160px; overflow-y: auto;">
             <div class="request-card">
                 <div><b>Friend:</b> TEST</div>
                 <div>Wants to join lobby & spawn Guest Allay.</div>
@@ -163,12 +174,18 @@ def read_root():
     <script>
         let sessionTokens = 0;
         const maxTokenQuota = 5000;
-        let activeLobbies = ["ALLAY-101"];
+        let activeLobbies = ["Default-Lobby"];
+        let lobbyPlayers = {};
         let isDevAuthenticated = false;
 
         window.onload = function() {
             checkDeveloperStatus();
         };
+
+        function getTimeString() {
+            const now = new Date();
+            return now.toTimeString().split(' ')[0];
+        }
 
         function checkDeveloperStatus() {
             const gt = document.getElementById('gamertagInput').value.trim().toLowerCase();
@@ -181,7 +198,7 @@ def read_root():
                 passContainer.style.display = 'block';
                 if (pass === 'Jackson140715') {
                     isDevAuthenticated = true;
-                    badgeContainer.innerHTML = '<span class="badge badge-dev">🚀 DEV ADMIN (UNLOCKED)</span>';
+                    badgeContainer.innerHTML = '<span class="badge badge-dev">🚀 DEVELOPER LOBBY (ADMIN)</span>';
                     headerStatus.innerHTML = '<span class="badge badge-dev">ROOT ADMIN</span>';
                 } else {
                     isDevAuthenticated = false;
@@ -194,26 +211,43 @@ def read_root():
                 badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-dim);">Standard User Mode</span>';
                 headerStatus.innerHTML = '<span class="badge">GUEST MODE</span>';
             }
+
+            const currentLobby = document.getElementById('activeLobbyBadge').innerText.replace("LOBBY: ", "");
+            const activeGt = document.getElementById('gamertagInput').value.trim();
+            if (activeGt && isDevAuthenticated) {
+                if (!lobbyPlayers[currentLobby]) lobbyPlayers[currentLobby] = [];
+                if (!lobbyPlayers[currentLobby].includes(activeGt)) lobbyPlayers[currentLobby].push(activeGt);
+            }
+
             updateLobbiesUI();
+            updatePlayersUI();
         }
 
         function startNewLobby() {
             const codeInput = document.getElementById('newLobbyCode');
-            const code = codeInput.value.trim().toUpperCase();
+            const code = codeInput.value.trim();
             if (!code) return;
 
             if (!activeLobbies.includes(code)) {
                 activeLobbies.push(code);
                 updateLobbiesUI();
             }
-            document.getElementById('activeLobbyBadge').innerText = "LOBBY: " + code;
+            joinLobby(code);
             codeInput.value = '';
-            document.getElementById('terminalOutput').innerText += `\\n[System]: Created & joined lobby '${code}'!`;
+            document.getElementById('terminalOutput').innerText += `\\n[${getTimeString()}]: Created & joined lobby '${code}'!`;
         }
 
         function joinLobby(code) {
             document.getElementById('activeLobbyBadge').innerText = "LOBBY: " + code;
-            document.getElementById('terminalOutput').innerText += `\\n[System]: Switched active session to lobby '${code}'.`;
+            document.getElementById('terminalOutput').innerText += `\\n[${getTimeString()}]: Switched active session to lobby '${code}'.`;
+            
+            const gt = document.getElementById('gamertagInput').value.trim();
+            if (gt) {
+                if (!lobbyPlayers[code]) lobbyPlayers[code] = [];
+                if (!lobbyPlayers[code].includes(gt)) lobbyPlayers[code].push(gt);
+            }
+            updateLobbiesUI();
+            updatePlayersUI();
         }
 
         function deleteLobby(code) {
@@ -222,30 +256,62 @@ def read_root():
                 return;
             }
             activeLobbies = activeLobbies.filter(l => l !== code);
-            if (activeLobbies.length === 0) activeLobbies.push("DEFAULT-LOBBY");
+            if (activeLobbies.length === 0) activeLobbies.push("Default-Lobby");
+            delete lobbyPlayers[code];
             updateLobbiesUI();
-            document.getElementById('terminalOutput').innerText += `\\n[Admin]: Lobby '${code}' permanently deleted by Developer!`;
+            updatePlayersUI();
+            document.getElementById('terminalOutput').innerText += `\\n[${getTimeString()}]: Lobby '${code}' permanently deleted by Developer!`;
         }
 
         function cancelAllRequests() {
             const container = document.getElementById('minecraftRequestsContainer');
             container.innerHTML = '<div style="font-size:0.75rem; color:var(--text-dim); text-align:center; padding:10px;">All incoming requests cancelled.</div>';
-            document.getElementById('terminalOutput').innerText += `\\n[Admin]: Incoming request queue cleared/cancelled.`;
+            document.getElementById('terminalOutput').innerText += `\\n[${getTimeString()}]: Incoming request queue cleared.`;
         }
 
         function updateLobbiesUI() {
             const listDiv = document.getElementById('activeLobbiesList');
             listDiv.innerHTML = '';
             activeLobbies.forEach(code => {
+                const playersInRoom = lobbyPlayers[code] || [];
+                const hasDevInLobby = playersInRoom.some(p => p.toLowerCase() === 'jackson22510') && isDevAuthenticated;
+                
+                const devCardClass = hasDevInLobby ? 'lobby-card lobby-card-dev' : 'lobby-card';
+                const devLabel = hasDevInLobby ? '<br><span style="font-size:0.68rem; color:var(--accent-dev); font-weight:bold;">👾 A Dev is in the lobby</span>' : '';
                 const deleteBtnHtml = isDevAuthenticated ? `<button class="btn btn-danger" style="width: auto; padding: 2px 6px; margin:0;" onclick="deleteLobby('${code}')">Delete</button>` : '';
+
                 listDiv.innerHTML += `
-                    <div class="lobby-card">
-                        <span><b>${code}</b></span> 
+                    <div class="${devCardClass}">
+                        <div>
+                            <span><b>${code}</b></span>
+                            ${devLabel}
+                        </div> 
                         <div style="display: flex; gap: 4px;">
                             <button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby('${code}')">Join</button>
                             ${deleteBtnHtml}
                         </div>
                     </div>`;
+            });
+        }
+
+        function updatePlayersUI() {
+            const currentLobby = document.getElementById('activeLobbyBadge').innerText.replace("LOBBY: ", "");
+            const container = document.getElementById('playersListContainer');
+            const players = lobbyPlayers[currentLobby] || [];
+
+            if (players.length === 0) {
+                container.innerHTML = '<div class="player-item"><span style="color:var(--text-dim);">No players in this lobby</span></div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            players.forEach(p => {
+                const isDevPlayer = (p.toLowerCase() === 'jackson22510') && isDevAuthenticated;
+                if (isDevPlayer) {
+                    container.innerHTML += `<div class="player-item player-item-dev"><span>🚀 ${p} (DEV)</span></div>`;
+                } else {
+                    container.innerHTML += `<div class="player-item"><span>🟢 ${p}</span></div>`;
+                }
             });
         }
 
@@ -268,80 +334,36 @@ def read_root():
 
             const text = inputField.value.trim();
             const currentLobby = lobbyBadge.innerText.replace("LOBBY: ", "");
-            const gamertag = gtInput.value.trim() || "Guest";
+            const gamertag = gtInput.value.trim();
             const devPassword = passInput.value.trim();
             const customApiKey = apiKeyInput.value.trim();
 
-            if (!text) return;
-
-            if (sessionTokens >= maxTokenQuota) {
-                outputDiv.innerText += `\\n[WARNING]: Token quota exhausted! Please wait.\\n`;
+            if (!gamertag) {
+                alert("Please enter your Minecraft Gamertag before chatting!");
+                gtInput.focus();
                 return;
             }
 
-            outputDiv.innerText += `\\n> [${gamertag}@${currentLobby}] ${text}\\n[Allay]: Querying Gemini...`;
+            if (!text) return;
+
+            if (!lobbyPlayers[currentLobby]) lobbyPlayers[currentLobby] = [];
+            if (!lobbyPlayers[currentLobby].includes(gamertag)) {
+                lobbyPlayers[currentLobby].push(gamertag);
+                updateLobbiesUI();
+                updatePlayersUI();
+            }
+
+            if (sessionTokens >= maxTokenQuota) {
+                outputDiv.innerText += `\\n[${getTimeString()}]: [WARNING]: Token quota exhausted! Please reset.\\n`;
+                return;
+            }
+
+            outputDiv.innerText += `\\n> [${getTimeString()}] [${gamertag}@${currentLobby}] ${text}\\n[Allay]: Querying Gemini...`;
             inputField.value = '';
+            outputDiv.scrollTop = outputDiv.scrollHeight;
 
             try {
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        prompt: text, 
-                        lobby_code: currentLobby,
-                        custom_api_key: customApiKey,
-                        gamertag: gamertag,
-                        dev_password: devPassword
-                    })
-                });
-                const data = await res.json();
-                
-                outputDiv.innerText += `\\n[Allay]: ${data.reply}\\n`;
-                outputDiv.scrollTop = outputDiv.scrollHeight;
-
-                if (data.tokens_used) {
-                    sessionTokens += data.tokens_used;
-                    updateTokenUI();
-                }
-            } catch (err) {
-                outputDiv.innerText += `\\n[ERROR]: Failed to reach backend relay.\\n`;
-            }
-        }
-
-        function updateTokenUI() {
-            const percentage = Math.min(Math.round((sessionTokens / maxTokenQuota) * 100), 100);
-            const progressBar = document.getElementById('tokenProgressBar');
-            const tokenText = document.getElementById('tokenCountText');
-            const statusMsg = document.getElementById('tokenStatusMsg');
-
-            progressBar.style.width = percentage + '%';
-            tokenText.innerText = `${sessionTokens} / ${maxTokenQuota}`;
-
-            if (percentage >= 85) {
-                progressBar.style.backgroundColor = 'var(--accent-danger)';
-                statusMsg.style.color = 'var(--accent-danger)';
-                statusMsg.innerText = '🔴 HIGH USAGE: Throttle requests!';
-            } else if (percentage >= 60) {
-                progressBar.style.backgroundColor = 'var(--accent-warning)';
-                statusMsg.style.color = 'var(--accent-warning)';
-                statusMsg.innerText = '⚠️ Caution: Token usage rising.';
-            } else {
-                progressBar.style.backgroundColor = 'var(--accent-green)';
-                statusMsg.style.color = 'var(--text-dim)';
-                statusMsg.innerText = '🟢 Optimal Bandwidth';
-            }
-        }
-    </script>
-</body>
-</html>"""
-    return HTMLResponse(content=html_content)
-
-@app.post("/chat")
-def chat_with_companion(req: CompanionRequest):
-    result = ask_ai_companion(req.prompt, req.lobby_code, req.custom_api_key, req.gamertag, req.dev_password)
-    return {
-        "reply": result["reply"],
-        "tokens_used": result["tokens_used"]
-}
-
-
+                    body: JSON.strin
