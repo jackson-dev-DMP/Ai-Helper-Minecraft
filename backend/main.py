@@ -83,8 +83,8 @@ def read_root():
             <label>Minecraft Gamertag:</label>
             <input type="text" id="gamertagInput" value="jackson22510" oninput="checkDeveloperStatus()">
             <div id="devPasswordContainer" style="margin-top: 6px;">
-                <label>Dev Password (Jackson140715):</label>
-                <input type="password" id="devPasswordInput" placeholder="Enter password..." oninput="checkDeveloperStatus()">
+                <label>Developer Password:</label>
+                <input type="password" id="devPasswordInput" placeholder="Enter secure password..." oninput="checkDeveloperStatus()">
             </div>
             <div id="devBadgeContainer" style="margin-top: 6px;"></div>
         </div>
@@ -122,7 +122,7 @@ def read_root():
                 <div id="headerStatusBadge"></div>
             </div>
         </div>
-        <div class="terminal-output" id="terminalOutput">System ready. Enter your credentials, verify your dev key, and command your Allay network!</div>
+        <div class="terminal-output" id="terminalOutput">System ready. Enter your credentials and command your Allay network securely!</div>
         <div class="input-box">
             <input type="text" id="promptInput" placeholder="Send a message to Allay..." onkeydown="if(event.key === 'Enter') sendToAllay()">
             <button class="send-btn" onclick="sendToAllay()">▲</button>
@@ -185,7 +185,7 @@ def read_root():
                     headerStatus.innerHTML = '<span class="badge badge-dev">ROOT ADMIN</span>';
                 } else {
                     isDevAuthenticated = false;
-                    badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--accent-warning);">⚠️ Enter Dev Password (Jackson140715)</span>';
+                    badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--accent-warning);">⚠️ Enter Dev Password</span>';
                     headerStatus.innerHTML = '<span class="badge">PENDING AUTH</span>';
                 }
             } else {
@@ -218,7 +218,7 @@ def read_root():
 
         function deleteLobby(code) {
             if (!isDevAuthenticated) {
-                alert("Access Denied: Only Dev Admin (jackson22510 with password) can delete lobbies!");
+                alert("Access Denied: Only Dev Admin can delete lobbies!");
                 return;
             }
             activeLobbies = activeLobbies.filter(l => l !== code);
@@ -342,5 +342,5 @@ def chat_with_companion(req: CompanionRequest):
     return {
         "reply": result["reply"],
         "tokens_used": result["tokens_used"]
-    }
+}
     
