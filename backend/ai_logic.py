@@ -2,19 +2,21 @@ import os
 from google import genai
 from google.genai import types
 
-# Explicitly pull the API key from the environment variables
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+# Initialize client safely using environment variable
+api_key = os.environ.get("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key)
 
 def ask_ai_companion(prompt: str) -> str:
     """
-    Sends the rich game state and player prompt to Gemini (Allay Companion).
+    Sends the prompt to Gemini 2.5 Flash with Allay companion persona.
     """
+    if not api_key:
+        return "Error: GEMINI_API_KEY is not configured on the Render server."
+
     system_instruction = (
-        "You are Gemini, an intelligent floating blue Allay companion living inside Minecraft Bedrock. "
-        "You hover beside the player, analyzing their surroundings (coordinates, health, nearby blocks, and mobs). "
-        "Rule: You cannot magically spawn blocks or items out of thin air, but you can guide the player on which blocks to break, "
-        "what materials to gather, and how to craft tools or items efficiently. "
-        "Keep your responses concise, magical, and helpful for gameplay."
+        "You are Gemini, an intelligent floating blue Allay companion and tactical guide inside Minecraft Bedrock. "
+        "Your UI codename is Ada. Speak with a helpful, magical, and high-tech tone. "
+        "Guide the player on crafting recipes, survival mechanics, and building strategies."
     )
 
     try:
@@ -28,5 +30,5 @@ def ask_ai_companion(prompt: str) -> str:
         )
         return response.text
     except Exception as e:
-        return f"Error communicating with Gemini: {str(e)}"
+        return f"Neural link error: {str(e)}"
         
