@@ -79,7 +79,6 @@ def read_root():
     </style>
 </head>
 <body>
-    <!-- Left Sidebar: Identity & Lobbies -->
     <div class="sidebar-left">
         <h2>USER & SECURITY v1.5</h2>
         <div class="control-group">
@@ -114,7 +113,6 @@ def read_root():
         </div>
     </div>
 
-    <!-- Main Console -->
     <div class="main-console">
         <div>
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
@@ -132,7 +130,6 @@ def read_root():
         </div>
     </div>
 
-    <!-- Right Sidebar: Players, Token Economy & Requests -->
     <div class="sidebar-right">
         <h2>PLAYERS IN LOBBY</h2>
         <div id="playersListContainer" style="max-height: 120px; overflow-y: auto; margin-bottom: 10px;">
@@ -234,12 +231,12 @@ def read_root():
             }
             joinLobby(code);
             codeInput.value = '';
-            document.getElementById('terminalOutput').innerText += `\\n[${getTimeString()}]: Created & joined lobby '${code}'!`;
+            document.getElementById('terminalOutput').innerText += "\\n[" + getTimeString() + "]: Created & joined lobby '" + code + "'!";
         }
 
         function joinLobby(code) {
             document.getElementById('activeLobbyBadge').innerText = "LOBBY: " + code;
-            document.getElementById('terminalOutput').innerText += `\\n[${getTimeString()}]: Switched active session to lobby '${code}'.`;
+            document.getElementById('terminalOutput').innerText += "\\n[" + getTimeString() + "]: Switched active session to lobby '" + code + "'.";
             
             const gt = document.getElementById('gamertagInput').value.trim();
             if (gt) {
@@ -260,13 +257,13 @@ def read_root():
             delete lobbyPlayers[code];
             updateLobbiesUI();
             updatePlayersUI();
-            document.getElementById('terminalOutput').innerText += `\\n[${getTimeString()}]: Lobby '${code}' permanently deleted by Developer!`;
+            document.getElementById('terminalOutput').innerText += "\\n[" + getTimeString() + "]: Lobby '" + code + "' permanently deleted by Developer!";
         }
 
         function cancelAllRequests() {
             const container = document.getElementById('minecraftRequestsContainer');
             container.innerHTML = '<div style="font-size:0.75rem; color:var(--text-dim); text-align:center; padding:10px;">All incoming requests cancelled.</div>';
-            document.getElementById('terminalOutput').innerText += `\\n[${getTimeString()}]: Incoming request queue cleared.`;
+            document.getElementById('terminalOutput').innerText += "\\n[" + getTimeString() + "]: Incoming request queue cleared.";
         }
 
         function updateLobbiesUI() {
@@ -278,19 +275,9 @@ def read_root():
                 
                 const devCardClass = hasDevInLobby ? 'lobby-card lobby-card-dev' : 'lobby-card';
                 const devLabel = hasDevInLobby ? '<br><span style="font-size:0.68rem; color:var(--accent-dev); font-weight:bold;">👾 A Dev is in the lobby</span>' : '';
-                const deleteBtnHtml = isDevAuthenticated ? `<button class="btn btn-danger" style="width: auto; padding: 2px 6px; margin:0;" onclick="deleteLobby('${code}')">Delete</button>` : '';
+                const deleteBtnHtml = isDevAuthenticated ? '<button class="btn btn-danger" style="width: auto; padding: 2px 6px; margin:0;" onclick="deleteLobby(\\'' + code + '\\')">Delete</button>' : '';
 
-                listDiv.innerHTML += `
-                    <div class="${devCardClass}">
-                        <div>
-                            <span><b>${code}</b></span>
-                            ${devLabel}
-                        </div> 
-                        <div style="display: flex; gap: 4px;">
-                            <button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby('${code}')">Join</button>
-                            ${deleteBtnHtml}
-                        </div>
-                    </div>`;
+                listDiv.innerHTML += '<div class="' + devCardClass + '"><div><span><b>' + code + '</b></span>' + devLabel + '</div><div style="display: flex; gap: 4px;"><button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby(\\'' + code + '\\')">Join</button>' + deleteBtnHtml + '</div></div>';
             });
         }
 
@@ -308,9 +295,9 @@ def read_root():
             players.forEach(p => {
                 const isDevPlayer = (p.toLowerCase() === 'jackson22510') && isDevAuthenticated;
                 if (isDevPlayer) {
-                    container.innerHTML += `<div class="player-item player-item-dev"><span>🚀 ${p} (DEV)</span></div>`;
+                    container.innerHTML += '<div class="player-item player-item-dev"><span>🚀 ' + p + ' (DEV)</span></div>';
                 } else {
-                    container.innerHTML += `<div class="player-item"><span>🟢 ${p}</span></div>`;
+                    container.innerHTML += '<div class="player-item"><span>🟢 ' + p + '</span></div>';
                 }
             });
         }
@@ -354,11 +341,11 @@ def read_root():
             }
 
             if (sessionTokens >= maxTokenQuota) {
-                outputDiv.innerText += `\\n[${getTimeString()}]: [WARNING]: Token quota exhausted! Please reset.\\n`;
+                outputDiv.innerText += "\\n[" + getTimeString() + "]: [WARNING]: Token quota exhausted! Please reset.\\n";
                 return;
             }
 
-            outputDiv.innerText += `\\n> [${getTimeString()}] [${gamertag}@${currentLobby}] ${text}\\n[Allay]: Querying Gemini...`;
+            outputDiv.innerText += "\\n> [" + getTimeString() + "] [" + gamertag + "@" + currentLobby + "] " + text + "\\n[Allay]: Querying Gemini...";
             inputField.value = '';
             outputDiv.scrollTop = outputDiv.scrollHeight;
 
@@ -366,4 +353,11 @@ def read_root():
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.strin
+                    body: JSON.stringify({ 
+                        prompt: text, 
+                        lobby_code: currentLobby,
+                        custom_api_key: customApiKey,
+                        gamertag: gamertag,
+                        dev_password: devPassword
+                    })
+                }
