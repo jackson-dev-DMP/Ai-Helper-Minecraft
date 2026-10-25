@@ -1,84 +1,68 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
 from ai_logic import ask_ai_companion
 
-app = FastAPI(title="Minecraft AI Companion Backend")
+app = FastAPI(title="Minecraft Allay AI Companion")
 
-# Enable CORS for dashboard web access
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+class CompanionRequest(BaseModel):
+    prompt: str
 
-# In-memory storage for active world sessions
-active_sessions: Dict[str, Dict[str, Any]] = {}
-
-class EnvironmentData(BaseModel):
-    position: Optional[Dict[str, int]] = None
-    health: Optional[int] = None
-    nearby_blocks: Optional[List[str]] = []
-    nearby_mobs: Optional[List[str]] = []
-    inventory: Optional[List[str]] = []
-
-class MinecraftEvent(BaseModel):
-    session_code: str
-    player_name: str
-    action: str
-    message: str
-    environment: Optional[EnvironmentData] = None
-
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def read_root():
-    return {"status": "AI Companion backend is online and ready!"}
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Minecraft Allay Companion - Dashboard</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 50px; }
+            .container { max-width: 600px; margin: auto; background: #2a2a2a; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+            h1 { color: #55cdfc; }
+            textarea { width: 100%; height: 100px; background: #333; color: #fff; border: 1px solid #444; border-radius: 6px; padding: 10px; font-size: 16px; margin-bottom: 10px; }
+            button { background: #55cdfc; color: #1a1a1a; border: none; padding: 10px 20px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+            button:hover { background: #3fa9db; }
+            #response { margin-top: 20px; background: #1f1f1f; padding: 15px; border-radius: 6px; text-align: left; min-height: 50px; white-space: pre-wrap; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🧚‍♂️ Allay AI Companion</h1>
+            <p>Your autonomous Gemini tactical guide for Minecraft Bedrock!</p>
+            <textarea id="promptInput" placeholder="Ask your Allay for crafting recipes, survival tips, or coordinate analysis..."></textarea>
+            <br>
+            <button onclick="askAllay()">Ask Allay</button>
+            <h3>Companion Response:</h3>
+            <div id="response">Waiting for query...</div>
+        </div>
 
-@app.get("/api/companion/status/{session_code}")
-def get_session_status(session_code: str):
-    if session_code not in active_sessions:
-        return {"status": "no_data", "message": "No activity recorded for this session code yet."}
-    return {"status": "active", "data": active_sessions[session_code]}
+        <script>
+            async function askAllay() {
+                const prompt = document.getElementById('promptInput').value;
+                const responseDiv = document.getElementById('response');
+                if (!prompt) return;
+                
+                responseDiv.innerText = "✨ Allay is thinking...";
+                
+                try {
+                    const res = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: prompt })
+                    });
+                    const data = await res.json();
+                    responseDiv.innerText = data.reply || "No response received.";
+                } catch (err) {
+                    responseDiv.innerText = "Error connecting to the cloud backend.";
+                }
+            }
+        </script>
+    </body>
+    </html>
+    """
 
-@app.post("/api/companion/interact")
-def interact_with_ai(event: MinecraftEvent):
-    try:
-        env_summary = ""
-        env_dict = {}
-        if event.environment:
-            env_dict = event.environment.dict()
-            pos = env_dict.get('position')
-            pos_str = f"X: {pos.get('x')}, Y: {pos.get('y')}, Z: {pos.get('z')}" if pos else "Unknown"
-            env_summary = (
-                f"\n[World Telemetry - Session: {event.session_code}]"
-                f"\n- Player Position: {pos_str}"
-                f"\n- Health: {env_dict.get('health')}"
-                f"\n- Nearby Blocks: {', '.join(env_dict.get('nearby_blocks', [])) or 'None visible'}"
-                f"\n- Nearby Mobs/Threats: {', '.join(env_dict.get('nearby_mobs', [])) or 'None'}"
-            )
-
-        prompt = f"{env_summary}\n\nPlayer [{event.player_name}] says/requests: '{event.message}'"
-        
-        # Get AI response and format with Gemini tag
-        raw_ai_response = ask_ai_companion(prompt)
-        formatted_ai_response = f"Gemini: {raw_ai_response}"
-        
-        # Save state to active session memory
-        active_sessions[event.session_code] = {
-            "player_name": event.player_name,
-            "last_message": event.message,
-            "ai_response": formatted_ai_response,
-            "environment": env_dict,
-            "timestamp": "Just now"
-        }
-        
-        return {
-            "status": "success",
-            "session_code": event.session_code,
-            "ai_response": formatted_ai_response
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-        
+@app.post("/chat")
+def chat_with_companion(req: CompanionRequest):
+    reply = ask_ai_companion(req.prompt)
+    return {"reply": reply}
+    
