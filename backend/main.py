@@ -344,4 +344,4 @@ def chat_with_companion(req: CompanionRequest):
         "tokens_used": result["tokens_used"]
 }
 
-    
+
