@@ -37,7 +37,152 @@
         
         .control-group { background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; }
         .control-group label { font-size: 0.75rem; color: var(--text-dim); display: block; margin-bottom: 4px; }
-        .control-group input, .control-group select { width: 100%; background: #161b22; border: 1px solid var(--border-color); color: #fff; padding: 6px; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem; outline: none; }
+        .control-group input { width: 100%; background: #161b22; border: 1px solid var(--border-color); color: #fff; padding: 6px; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem; outline: none; }
         
-        .btn { background: var(--accent-green); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 6px; font-size: 0
-      
+        .btn { background: var(--accent-green); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 6px; font-size: 0.85rem; }
+        .btn:hover { background: #2ea043; }
+        .btn-danger { background: var(--accent-danger); }
+        .btn-dev { background: var(--accent-dev); }
+
+        .terminal-output { flex-grow: 1; background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; margin: 10px 0; overflow-y: auto; font-family: monospace; white-space: pre-wrap; font-size: 0.9rem; color: #7ee787; }
+        .input-box { display: flex; gap: 8px; align-items: center; background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px; }
+        .input-box input { flex-grow: 1; background: transparent; border: none; color: #fff; font-size: 0.9rem; outline: none; }
+        .send-btn { background: var(--accent-green); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        
+        .lobby-card { background: #161b22; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+        .lobby-card-dev { background: rgba(163, 113, 247, 0.15); border: 1px solid var(--accent-dev); }
+        .player-item { background: #161b22; border: 1px solid var(--border-color); padding: 5px 8px; border-radius: 4px; margin-bottom: 4px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+        .player-item-dev { border: 1px solid var(--accent-dev); color: var(--accent-dev); font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="sidebar-left">
+        <h2>USER & SECURITY v1.5</h2>
+        <div class="control-group">
+            <label>Minecraft Gamertag:</label>
+            <input type="text" id="gamertagInput" placeholder="Enter your gamertag..." oninput="checkDeveloperStatus()">
+            <div id="devPasswordContainer" style="margin-top: 6px; display: none;">
+                <label>Developer Password:</label>
+                <input type="password" id="devPasswordInput" placeholder="Enter password..." oninput="checkDeveloperStatus()">
+            </div>
+            <div id="devBadgeContainer" style="margin-top: 6px;"></div>
+        </div>
+        <h2>ACTIVE LOBBIES</h2>
+        <div class="control-group">
+            <label>Start New Lobby:</label>
+            <input type="text" id="newLobbyCode" placeholder="e.g. SurvivalRoom">
+            <button class="btn" onclick="startNewLobby()">Start Lobby</button>
+        </div>
+        <div id="activeLobbiesList">
+            <div class="lobby-card">
+                <span><b>Default-Lobby</b></span>
+                <button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby('Default-Lobby')">Join</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-console">
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <span style="font-size: 1.1rem; font-weight: bold; color: #fff;">Allay Companion v1.5 (BETA)</span> 
+                <span class="badge" id="activeLobbyBadge">LOBBY: Default-Lobby</span>
+            </div>
+        </div>
+        <div class="terminal-output" id="terminalOutput">[00:00:01] System v1.5 (BETA) ready. Enter your gamertag to begin!</div>
+        <div class="input-box">
+            <input type="text" id="promptInput" placeholder="Send a message to Allay..." onkeydown="if(event.key === 'Enter') sendToAllay()">
+            <button class="send-btn" onclick="sendToAllay()">▲</button>
+        </div>
+    </div>
+
+    <div class="sidebar-right">
+        <h2>PLAYERS IN LOBBY</h2>
+        <div id="playersListContainer">
+            <div class="player-item"><span>No active players</span></div>
+        </div>
+    </div>
+
+    <script>
+        let activeLobbies = ["Default-Lobby"];
+        let lobbyPlayers = {};
+        let isDevAuthenticated = false;
+
+        function checkDeveloperStatus() {
+            const gt = document.getElementById('gamertagInput').value.trim().toLowerCase();
+            const pass = document.getElementById('devPasswordInput').value.trim();
+            const badgeContainer = document.getElementById('devBadgeContainer');
+            const passContainer = document.getElementById('devPasswordContainer');
+
+            if (gt === 'jackson22510') {
+                passContainer.style.display = 'block';
+                if (pass === 'Jackson140715') {
+                    isDevAuthenticated = true;
+                    badgeContainer.innerHTML = '<span class="badge badge-dev">🚀 DEVELOPER LOBBY (ADMIN)</span>';
+                } else {
+                    isDevAuthenticated = false;
+                    badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--accent-warning);">⚠️ Enter Dev Password</span>';
+                }
+            } else {
+                isDevAuthenticated = false;
+                passContainer.style.display = 'none';
+                badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-dim);">Standard User Mode</span>';
+            }
+            updateLobbiesUI();
+        }
+
+        function startNewLobby() {
+            const code = document.getElementById('newLobbyCode').value.trim();
+            if (!code) return;
+            if (!activeLobbies.includes(code)) activeLobbies.push(code);
+            joinLobby(code);
+            document.getElementById('newLobbyCode').value = '';
+        }
+
+        function joinLobby(code) {
+            document.getElementById('activeLobbyBadge').innerText = "LOBBY: " + code;
+            document.getElementById('terminalOutput').innerText += "\nSwitched to lobby '" + code + "'.";
+        }
+
+        function updateLobbiesUI() {
+            const listDiv = document.getElementById('activeLobbiesList');
+            listDiv.innerHTML = '';
+            activeLobbies.forEach(code => {
+                const playersInRoom = lobbyPlayers[code] || [];
+                const hasDevInLobby = playersInRoom.some(p => p.toLowerCase() === 'jackson22510') && isDevAuthenticated;
+                const devCardClass = hasDevInLobby ? 'lobby-card lobby-card-dev' : 'lobby-card';
+                const devLabel = hasDevInLobby ? '<br><span style="font-size:0.68rem; color:var(--accent-dev); font-weight:bold;">👾 A Dev is in the lobby</span>' : '';
+                
+                listDiv.innerHTML += '<div class="' + devCardClass + '"><div><span><b>' + code + '</b></span>' + devLabel + '</div><button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby(\'' + code + '\')">Join</button></div>';
+            });
+        }
+
+        async function sendToAllay() {
+            const text = document.getElementById('promptInput').value.trim();
+            const currentLobby = document.getElementById('activeLobbyBadge').innerText.replace("LOBBY: ", "");
+            const gamertag = document.getElementById('gamertagInput').value.trim();
+            const outputDiv = document.getElementById('terminalOutput');
+
+            if (!gamertag) {
+                alert("Please enter your Minecraft Gamertag first!");
+                return;
+            }
+            if (!text) return;
+
+            outputDiv.innerText += "\n> [" + gamertag + "@" + currentLobby + "] " + text + "\n[Allay]: Querying...";
+            document.getElementById('promptInput').value = '';
+
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: text, lobby_code: currentLobby, gamertag: gamertag })
+                });
+                const data = await res.json();
+                outputDiv.innerText += "\n[Allay]: " + data.reply + "\n";
+            } catch (err) {
+                outputDiv.innerText += "\n[ERROR]: Failed to reach backend.\n";
+            }
+        }
+    </script>
+</body>
+</html>
