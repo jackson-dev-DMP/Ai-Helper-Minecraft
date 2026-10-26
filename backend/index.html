@@ -133,9 +133,12 @@
         function startNewLobby() {
             const code = document.getElementById('newLobbyCode').value.trim();
             if (!code) return;
-            if (!activeLobbies.includes(code)) activeLobbies.push(code);
+            if (!activeLobbies.includes(code)) {
+                activeLobbies.push(code);
+            }
             joinLobby(code);
             document.getElementById('newLobbyCode').value = '';
+            updateLobbiesUI(); // Rafraîchit l'affichage de la liste des lobbies
         }
 
         function joinLobby(code) {
