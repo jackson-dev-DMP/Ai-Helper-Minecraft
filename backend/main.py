@@ -15,14 +15,25 @@ class CompanionRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
-    # Détermine le chemin dynamique du fichier index.html dans le même dossier
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-    html_path = os.path.join(current_dir, "index.html")
+    # On teste plusieurs chemins possibles pour index.html (selon d'où Render lance le serveur)
+    possible_paths = [
+        "index.html",
+        "backend/index.html",
+        os.path.join(os.path.dirname(__file__), "index.html"),
+        os.path.join(os.path.dirname(__file__), "../index.html")
+    ]
     
-    if os.path.exists(html_path):
-        with open(html_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h3>Error: index.html not found in backend directory.</h3>", status_code=500)
+    html_content = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            break
+            
+    if html_content:
+        return HTMLResponse(content=html_content)
+    
+    return HTMLResponse(content="<h3>Error: index.html not found. Place it in the root or backend/ folder!</h3>", status_code=500)
 
 @app.post("/chat")
 def chat_with_companion(req: CompanionRequest):
