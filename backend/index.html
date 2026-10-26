@@ -51,7 +51,7 @@
         .send-btn { background: var(--accent-green); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         
         .lobby-card { background: #161b22; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
-        .request-card { background: rgba(210, 153, 34, 0.1); border: 1px solid var(--accent-warning); padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 0.8rem; }
+        .request-card { background: rgba(210, 153, 34, 0.1); border: 1px solid var(--border-warning); padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 0.8rem; }
         .player-item { background: #161b22; border: 1px solid var(--border-color); padding: 5px 8px; border-radius: 4px; margin-bottom: 4px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
         .ban-item { background: rgba(248, 81, 73, 0.1); border: 1px solid var(--accent-danger); padding: 4px 8px; border-radius: 4px; margin-bottom: 4px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; color: var(--accent-danger); }
 
@@ -173,13 +173,16 @@
                 updateBannedUI();
                 checkCurrentGamertagBan();
             } catch (e) {
-                console.error("Failed to fetch server ban list");
+                console.log("Failed to fetch server ban list");
             }
         }
 
         function checkCurrentGamertagBan() {
-            const gt = document.getElementById('gamertagInput').value.trim().toLowerCase();
+            const gtInput = document.getElementById('gamertagInput');
             const overlay = document.getElementById('banOverlay');
+            if (!gtInput || !overlay) return;
+            
+            const gt = gtInput.value.trim().toLowerCase();
             if (gt && serverBannedList.includes(gt)) {
                 overlay.style.display = 'flex';
             } else {
@@ -188,34 +191,42 @@
         }
 
         function checkDeveloperStatus() {
-            const gt = document.getElementById('gamertagInput').value.trim().toLowerCase();
-            const pass = document.getElementById('devPasswordInput').value.trim();
+            const gtInput = document.getElementById('gamertagInput');
+            const passInput = document.getElementById('devPasswordInput');
             const badgeContainer = document.getElementById('devBadgeContainer');
             const passContainer = document.getElementById('devPasswordContainer');
+
+            if (!gtInput) return;
+
+            const gt = gtInput.value.trim().toLowerCase();
+            const pass = passInput ? passInput.value.trim() : '';
 
             checkCurrentGamertagBan();
 
             if (gt === 'jackson22510') {
-                passContainer.style.display = 'block';
+                if (passContainer) passContainer.style.display = 'block';
                 if (pass === 'Jackson140715') {
                     isDevAuthenticated = true;
-                    badgeContainer.innerHTML = '<span class="badge badge-dev">🚀 DEVELOPER ADMIN</span>';
+                    if (badgeContainer) badgeContainer.innerHTML = '<span class="badge badge-dev">🚀 DEVELOPER ADMIN</span>';
                 } else {
                     isDevAuthenticated = false;
-                    badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--accent-warning);">⚠️ Enter Dev Password</span>';
+                    if (badgeContainer) badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--accent-warning);">⚠️ Enter Dev Password</span>';
                 }
             } else {
                 isDevAuthenticated = false;
-                passContainer.style.display = 'none';
-                badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-dim);">Standard User Mode</span>';
+                if (passContainer) passContainer.style.display = 'none';
+                if (badgeContainer) badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-dim);">Standard User Mode</span>';
             }
             updateLobbiesUI();
             updatePlayersUI();
         }
 
         function startNewLobby() {
-            const code = document.getElementById('newLobbyCode').value.trim();
+            const input = document.getElementById('newLobbyCode');
+            if (!input) return;
+            const code = input.value.trim();
             if (!code) return;
+            
             if (serverBannedList.includes(code.toLowerCase())) {
                 alert("Cannot create lobby with a banned name!");
                 return;
@@ -224,20 +235,27 @@
                 activeLobbies.push(code);
             }
             joinLobby(code);
-            document.getElementById('newLobbyCode').value = '';
+            input.value = '';
             updateLobbiesUI();
         }
 
         function joinLobby(code) {
-            const gt = document.getElementById('gamertagInput').value.trim().toLowerCase();
+            const gtInput = document.getElementById('gamertagInput');
+            const gt = gtInput ? gtInput.value.trim().toLowerCase() : '';
+            
             if (gt && serverBannedList.includes(gt)) {
-                document.getElementById('banOverlay').style.display = 'flex';
+                const overlay = document.getElementById('banOverlay');
+                if (overlay) overlay.style.display = 'flex';
                 return;
             }
-            document.getElementById('activeLobbyBadge').innerText = "LOBBY: " + code;
-            document.getElementById('terminalOutput').innerText += "\nSwitched to lobby '" + code + "'.";
             
-            const rawGt = document.getElementById('gamertagInput').value.trim();
+            const badge = document.getElementById('activeLobbyBadge');
+            const output = document.getElementById('terminalOutput');
+            
+            if (badge) badge.innerText = "LOBBY: " + code;
+            if (output) output.innerText += "\nSwitched to lobby '" + code + "'.";
+            
+            const rawGt = gtInput ? gtInput.value.trim() : '';
             if (rawGt) {
                 if (!lobbyPlayers[code]) lobbyPlayers[code] = [];
                 if (!lobbyPlayers[code].includes(rawGt)) lobbyPlayers[code].push(rawGt);
@@ -255,19 +273,22 @@
             activeLobbies = activeLobbies.filter(l => l !== code);
             delete lobbyPlayers[code];
             
-            const currentLobby = document.getElementById('activeLobbyBadge').innerText.replace("LOBBY: ", "");
+            const badge = document.getElementById('activeLobbyBadge');
+            const currentLobby = badge ? badge.innerText.replace("LOBBY: ", "") : "Default-Lobby";
             if (currentLobby === code) {
                 joinLobby("Default-Lobby");
             }
             updateLobbiesUI();
-            document.getElementById('terminalOutput').innerText += "\n[System]: Lobby '" + code + "' deleted.";
+            const output = document.getElementById('terminalOutput');
+            if (output) output.innerText += "\n[System]: Lobby '" + code + "' deleted.";
         }
 
         function kickPlayer(lobby, player) {
             if (!lobbyPlayers[lobby]) return;
             lobbyPlayers[lobby] = lobbyPlayers[lobby].filter(p => p !== player);
             updatePlayersUI();
-            document.getElementById('terminalOutput').innerText += "\n[System]: 🚷 " + player + " has been kicked out of lobby '" + lobby + "'! Message: 'You have been kicked out of the lobby'.";
+            const output = document.getElementById('terminalOutput');
+            if (output) output.innerText += "\n[System]: 🚷 " + player + " has been kicked out of lobby '" + lobby + "'! Message: 'You have been kicked out of the lobby'.";
         }
 
         async function banPlayer(player) {
@@ -278,16 +299,19 @@
                     body: JSON.stringify({ gamertag: player })
                 });
                 const data = await res.json();
-                serverBannedList = data.banned;
+                serverBannedList = data.banned || [];
                 
-                const currentLobby = document.getElementById('activeLobbyBadge').innerText.replace("LOBBY: ", "");
+                const badge = document.getElementById('activeLobbyBadge');
+                const currentLobby = badge ? badge.innerText.replace("LOBBY: ", "") : "";
                 if (lobbyPlayers[currentLobby]) {
                     lobbyPlayers[currentLobby] = lobbyPlayers[currentLobby].filter(p => p !== player);
                 }
                 updatePlayersUI();
                 updateBannedUI();
                 checkCurrentGamertagBan();
-                document.getElementById('terminalOutput').innerText += "\n[System]: 🔨 " + player + " has been globally BANNED on the server!";
+                
+                const output = document.getElementById('terminalOutput');
+                if (output) output.innerText += "\n[System]: 🔨 " + player + " has been globally BANNED on the server!";
             } catch(e) {
                 alert("Failed to ban player on server.");
             }
@@ -301,21 +325,27 @@
                     body: JSON.stringify({ gamertag: player })
                 });
                 const data = await res.json();
-                serverBannedList = data.banned;
+                serverBannedList = data.banned || [];
                 updateBannedUI();
                 checkCurrentGamertagBan();
-                document.getElementById('terminalOutput').innerText += "\n[System]: ✨ " + player + " has been unbanned.";
+                
+                const output = document.getElementById('terminalOutput');
+                if (output) output.innerText += "\n[System]: ✨ " + player + " has been unbanned.";
             } catch(e) {
                 alert("Failed to unban player on server.");
             }
         }
 
         function cancelAllRequests() {
-            document.getElementById('minecraftRequestsContainer').innerHTML = '<div style="font-size:0.75rem; color:var(--text-dim); text-align:center; padding:10px;">All requests cancelled.</div>';
+            const reqContainer = document.getElementById('minecraftRequestsContainer');
+            if (reqContainer) {
+                reqContainer.innerHTML = '<div style="font-size:0.75rem; color:var(--text-dim); text-align:center; padding:10px;">All requests cancelled.</div>';
+            }
         }
 
         function updateLobbiesUI() {
             const listDiv = document.getElementById('activeLobbiesList');
+            if (!listDiv) return;
             listDiv.innerHTML = '';
             activeLobbies.forEach(code => {
                 const deleteBtn = code !== "Default-Lobby" ? '<button class="btn btn-danger" style="width: auto; padding: 2px 6px; margin:0;" onclick="deleteLobby(\'' + code + '\')">Delete</button>' : '';
@@ -324,8 +354,11 @@
         }
 
         function updatePlayersUI() {
-            const currentLobby = document.getElementById('activeLobbyBadge').innerText.replace("LOBBY: ", "");
+            const badge = document.getElementById('activeLobbyBadge');
+            const currentLobby = badge ? badge.innerText.replace("LOBBY: ", "") : "Default-Lobby";
             const container = document.getElementById('playersListContainer');
+            if (!container) return;
+            
             const players = lobbyPlayers[currentLobby] || [];
 
             if (players.length === 0) {
@@ -341,25 +374,4 @@
 
         function updateBannedUI() {
             const container = document.getElementById('bannedUsersContainer');
-            if (serverBannedList.length === 0) {
-                container.innerHTML = '<div style="font-size: 0.75rem; color: var(--text-dim); text-align: center; padding: 5px;">No banned users</div>';
-                return;
-            }
-            container.innerHTML = '';
-            serverBannedList.forEach(b => {
-                container.innerHTML += '<div class="ban-item"><span>🚫 ' + b + '</span><button class="btn" style="width:auto; padding:1px 5px; margin:0; font-size:0.65rem;" onclick="unbanPlayer(\'' + b + '\')">Unban</button></div>';
-            });
-        }
-
-        function approveRequest(btnElement, accepted) {
-            const card = btnElement.closest('.request-card');
-            if (accepted) {
-                card.innerHTML = '<b style="color:var(--accent-green);">✔ Accepted. Allay deployed!</b>';
-            } else {
-                card.innerHTML = '<b style="color:var(--accent-danger);">✖ Request Denied & Cancelled.</b>';
-            }
-        }
-
-        async function sendToAllay() {
-            const text = document.getElementById('promptInput').value.trim();
-            const currentLobby = document.getElementById('activeLobbyBad
+    
