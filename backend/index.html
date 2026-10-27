@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Allay AI Companion // Secure Terminal v1.5 (BETA)</title>
+    <style>
+        :root {
+            --bg-main: #0d1117;
+            --bg-panel: #161b22;
+            --border-color: #30363d;
+            --accent-green: #238636;
+            --accent-glow: #55cdfc;
+            --accent-warning: #d29922;
+            --accent-danger: #f85149;
+            --accent-dev: #a371f7;
+            --text-main: #c9d1d9;
+            --text-dim: #8b949e;
+        }
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Inter, monospace, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            height: 90vh;
+            box-sizing: border-box;
+            gap: 15px;
+        }
+        .sidebar-left { width: 28%; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; gap: 12px; }
+        .main-console { width: 44%; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        .sidebar-right { width: 28%; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; gap: 12px; }
+        
+        h2, h3 { margin: 0 0 5px 0; color: #fff; font-size: 0.95rem; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+        .badge { background: #21262d; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; color: var(--accent-glow); font-weight: bold; }
+        .badge-dev { background: rgba(163, 113, 247, 0.15); border: 1px solid var(--accent-dev); color: var(--accent-dev); }
+        
+        .control-group { background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; }
+        .control-group label { font-size: 0.75rem; color: var(--text-dim); display: block; margin-bottom: 4px; }
+        .control-group input { width: 100%; background: #161b22; border: 1px solid var(--border-color); color: #fff; padding: 6px; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem; outline: none; }
+        
+        .btn { background: var(--accent-green); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 6px; font-size: 0.85rem; }
+        .btn:hover { background: #2ea043; }
+        .btn-danger { background: var(--accent-danger); }
+        .btn-danger:hover { background: #da3633; }
+        .btn-dev { background: var(--accent-dev); }
+
+        .terminal-output { flex-grow: 1; background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; margin: 10px 0; overflow-y: auto; font-family: monospace; white-space: pre-wrap; font-size: 0.9rem; color: #7ee787; }
+        .input-box { display: flex; gap: 8px; align-items: center; background: #0a0c10; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px; }
+        .input-box input { flex-grow: 1; background: transparent; border: none; color: #fff; font-size: 0.9rem; outline: none; }
+        .send-btn { background: var(--accent-green); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        
+        .lobby-card { background: #161b22; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+        .request-card { background: rgba(210, 153, 34, 0.1); border: 1px solid var(--accent-warning); padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 0.8rem; }
+        .player-item { background: #161b22; border: 1px solid var(--border-color); padding: 5px 8px; border-radius: 4px; margin-bottom: 4px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+        .ban-item { background: rgba(248, 81, 73, 0.1); border: 1px solid var(--accent-danger); padding: 4px 8px; border-radius: 4px; margin-bottom: 4px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; color: var(--accent-danger); }
+
+        #banOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(13, 17, 23, 0.95); z-index: 9999;
+            display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; padding: 20px;
+        }
+    </style>
+</head>
+<body onload="initTerminal()">
+
+    <!-- Banned Screen Overlay -->
+    <div id="banOverlay">
+        <h1 style="color: var(--accent-danger); font-size: 2rem; margin-bottom: 10px;">❌ ACCESS DENIED (BANNED)</h1>
+        <p style="color: var(--text-main); font-size: 1rem; max-width: 500px; line-height: 1.5;">
+            Your Minecraft Gamertag has been globally banned from accessing this terminal and lobbies.
+        </p>
+        <div style="background: var(--bg-panel); border: 1px solid var(--border-color); padding: 15px; border-radius: 6px; margin: 20px 0; max-width: 450px;">
+            <p style="font-size: 0.85rem; color: var(--text-dim); margin: 0 0 10px 0;">
+                Would you like to submit an unban appeal? You can open an issue or contact support on our GitHub repository.
+            </p>
+            <a href="https://github.com/jackson22510/Ai-Helper-Minecraft" target="_blank" class="btn" style="text-decoration: none; display: inline-block;">
+                📂 Open GitHub Appeal Page
+            </a>
+        </div>
+        <button class="btn btn-danger" style="width: auto; padding: 6px 20px;" onclick="location.reload()">Check Again</button>
+    </div>
+
+    <!-- Left Sidebar: Lobbies & Admin Controls -->
+    <div class="sidebar-left">
+        <h2>USER & SECURITY v1.5</h2>
+        <div class="control-group">
+            <label>Minecraft Gamertag:</label>
+            <input type="text" id="gamertagInput" placeholder="Enter your gamertag..." oninput="checkDeveloperStatus()">
+            <div id="devPasswordContainer" style="margin-top: 6px; display: none;">
+                <label>Developer Password:</label>
+                <input type="password" id="devPasswordInput" placeholder="Enter password..." oninput="checkDeveloperStatus()">
+            </div>
+            <div id="devBadgeContainer" style="margin-top: 6px;"></div>
+        </div>
+
+        <h2>ACTIVE LOBBIES</h2>
+        <div class="control-group">
+            <label>Start New Lobby:</label>
+            <input type="text" id="newLobbyCode" placeholder="e.g. SurvivalRoom">
+            <button class="btn" onclick="startNewLobby()">Start Lobby</button>
+        </div>
+        <div id="activeLobbiesList">
+            <div class="lobby-card">
+                <span><b>Default-Lobby</b></span>
+                <div style="display: flex; gap: 4px;">
+                    <button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby('Default-Lobby')">Join</button>
+                </div>
+            </div>
+        </div>
+
+        <h2>BANNED USERS (SERVER)</h2>
+        <div id="bannedUsersContainer" style="max-height: 100px; overflow-y: auto;">
+            <div style="font-size: 0.75rem; color: var(--text-dim); text-align: center; padding: 5px;">No users are banned</div>
+        </div>
+    </div>
+
+    <!-- Main Console -->
+    <div class="main-console">
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <span style="font-size: 1.1rem; font-weight: bold; color: #fff;">Allay Companion v1.5 (BETA)</span> 
+                <span class="badge" id="activeLobbyBadge">LOBBY: Default-Lobby</span>
+            </div>
+        </div>
+        <div class="terminal-output" id="terminalOutput">[00:00:01] System v1.5 (BETA) ready. Enter your gamertag to begin!</div>
+        <div class="input-box">
+            <input type="text" id="promptInput" placeholder="Send a message to Allay..." onkeydown="if(event.key === 'Enter') sendToAllay()">
+            <button class="send-btn" onclick="sendToAllay()">▲</button>
+        </div>
+    </div>
+
+    <!-- Right Sidebar: Players & Requests -->
+    <div class="sidebar-right">
+        <h2>PLAYERS IN LOBBY</h2>
+        <div id="playersListContainer" style="max-height: 140px; overflow-y: auto; margin-bottom: 10px;">
+            <div class="player-item"><span>No active players</span></div>
+        </div>
+
+        <h2>INCOMING REQUESTS</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.75rem; color: var(--text-dim);">Queue:</span>
+            <button class="btn btn-danger" style="width: auto; padding: 2px 6px; margin:0; font-size:0.75rem;" onclick="cancelAllRequests()">Cancel All</button>
+        </div>
+        <div id="minecraftRequestsContainer" style="font-size: 0.8rem; color: var(--text-dim); max-height: 160px; overflow-y: auto;">
+            <div class="request-card">
+                <div><b>Friend:</b> TEST</div>
+                <div>Wants to join lobby & spawn Guest Allay.</div>
+                <div style="display: flex; gap: 5px; margin-top: 5px;">
+                    <button class="btn" style="margin:0; padding:2px 6px;" onclick="approveRequest(this, true)">Accept</button>
+                    <button class="btn btn-danger" style="margin:0; padding:2px 6px;" onclick="approveRequest(this, false)">Deny</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let activeLobbies = ["Default-Lobby"];
+        let lobbyPlayers = {};
+        let serverBannedList = [];
+        let isDevAuthenticated = false;
+
+        function initTerminal() {
+            fetchBannedUsers();
+            checkDeveloperStatus();
+        }
+
+        async function fetchBannedUsers() {
+            try {
+                const res = await fetch('/api/banned');
+                const data = await res.json();
+                serverBannedList = data.banned || [];
+                updateBannedUI();
+                checkCurrentGamertagBan();
+            } catch (e) {
+                console.log("Failed to fetch server ban list");
+                serverBannedList = [];
+                updateBannedUI();
+            }
+        }
+
+        function checkCurrentGamertagBan() {
+            const gtInput = document.getElementById('gamertagInput');
+            const overlay = document.getElementById('banOverlay');
+            if (!gtInput || !overlay) return;
+            
+            const gt = gtInput.value.trim().toLowerCase();
+            if (gt && serverBannedList.includes(gt)) {
+                overlay.style.display = 'flex';
+            } else {
+                overlay.style.display = 'none';
+            }
+        }
+
+        function checkDeveloperStatus() {
+            const gtInput = document.getElementById('gamertagInput');
+            const passInput = document.getElementById('devPasswordInput');
+            const badgeContainer = document.getElementById('devBadgeContainer');
+            const passContainer = document.getElementById('devPasswordContainer');
+
+            if (!gtInput) return;
+
+            const gt = gtInput.value.trim().toLowerCase();
+            const pass = passInput ? passInput.value.trim() : '';
+
+            checkCurrentGamertagBan();
+
+            if (gt === 'jackson22510') {
+                if (passContainer) passContainer.style.display = 'block';
+                if (pass === 'Jackson140715') {
+                    isDevAuthenticated = true;
+                    if (badgeContainer) badgeContainer.innerHTML = '<span class="badge badge-dev">🚀 DEVELOPER ADMIN</span>';
+                } else {
+                    isDevAuthenticated = false;
+                    if (badgeContainer) badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--accent-warning);">⚠️ Enter Dev Password</span>';
+                }
+            } else {
+                isDevAuthenticated = false;
+                if (passContainer) passContainer.style.display = 'none';
+                if (badgeContainer) badgeContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-dim);">Standard User Mode</span>';
+            }
+            updateLobbiesUI();
+            updatePlayersUI();
+        }
+
+        function startNewLobby() {
+            const input = document.getElementById('newLobbyCode');
+            if (!input) return;
+            const code = input.value.trim();
+            if (!code) return;
+            
+            if (serverBannedList.includes(code.toLowerCase())) {
+                alert("Cannot create lobby with a banned name!");
+                return;
+            }
+            if (!activeLobbies.includes(code)) {
+                activeLobbies.push(code);
+            }
+            joinLobby(code);
+            input.value = '';
+            updateLobbiesUI();
+        }
+
+        function joinLobby(code) {
+            const gtInput = document.getElementById('gamertagInput');
+            const gt = gtInput ? gtInput.value.trim().toLowerCase() : '';
+            
+            if (gt && serverBannedList.includes(gt)) {
+                const overlay = document.getElementById('banOverlay');
+                if (overlay) overlay.style.display = 'flex';
+                return;
+            }
+            
+            const badge = document.getElementById('activeLobbyBadge');
+            const output = document.getElementById('terminalOutput');
+            
+            if (badge) badge.innerText = "LOBBY: " + code;
+            if (output) output.innerText += "\nSwitched to lobby '" + code + "'.";
+            
+            const rawGt = gtInput ? gtInput.value.trim() : '';
+            if (rawGt) {
+                if (!lobbyPlayers[code]) lobbyPlayers[code] = [];
+                if (!lobbyPlayers[code].includes(rawGt)) lobbyPlayers[code].push(rawGt);
+            }
+            updatePlayersUI();
+        }
+
+        function deleteLobby(code) {
+            if (code === "Default-Lobby") {
+                alert("Cannot delete the default lobby!");
+                return;
+            }
+            if (!confirm("Are you sure you want to delete lobby '" + code + "'?")) return;
+            
+            activeLobbies = activeLobbies.filter(l => l !== code);
+            delete lobbyPlayers[code];
+            
+            const badge = document.getElementById('activeLobbyBadge');
+            const currentLobby = badge ? badge.innerText.replace("LOBBY: ", "") : "Default-Lobby";
+            if (currentLobby === code) {
+                joinLobby("Default-Lobby");
+            }
+            updateLobbiesUI();
+            const output = document.getElementById('terminalOutput');
+            if (output) output.innerText += "\n[System]: Lobby '" + code + "' deleted.";
+        }
+
+        function kickPlayer(lobby, player) {
+            if (!lobbyPlayers[lobby]) return;
+            lobbyPlayers[lobby] = lobbyPlayers[lobby].filter(p => p !== player);
+            updatePlayersUI();
+            const output = document.getElementById('terminalOutput');
+            if (output) output.innerText += "\n[System]: 🚷 " + player + " has been kicked out of lobby '" + lobby + "'! Message: 'You have been kicked out of the lobby'.";
+        }
+
+        async function banPlayer(player) {
+            try {
+                const res = await fetch('/api/ban', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gamertag: player })
+                });
+                const data = await res.json();
+                serverBannedList = data.banned || [];
+                
+                const badge = document.getElementById('activeLobbyBadge');
+                const currentLobby = badge ? badge.innerText.replace("LOBBY: ", "") : "";
+                if (lobbyPlayers[currentLobby]) {
+                    lobbyPlayers[currentLobby] = lobbyPlayers[currentLobby].filter(p => p !== player);
+                }
+                updatePlayersUI();
+                updateBannedUI();
+                checkCurrentGamertagBan();
+                
+                const output = document.getElementById('terminalOutput');
+                if (output) output.innerText += "\n[System]: 🔨 " + player + " has been globally BANNED on the server!";
+            } catch(e) {
+                alert("Failed to ban player on server.");
+            }
+        }
+
+        async function unbanPlayer(player) {
+            try {
+                const res = await fetch('/api/unban', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gamertag: player })
+                });
+                const data = await res.json();
+                serverBannedList = data.banned || [];
+                updateBannedUI();
+                checkCurrentGamertagBan();
+                
+                const output = document.getElementById('terminalOutput');
+                if (output) output.innerText += "\n[System]: ✨ " + player + " has been unbanned.";
+            } catch(e) {
+                alert("Failed to unban player on server.");
+            }
+        }
+
+        function cancelAllRequests() {
+            const reqContainer = document.getElementById('minecraftRequestsContainer');
+            if (reqContainer) {
+                reqContainer.innerHTML = '<div style="font-size:0.75rem; color:var(--text-dim); text-align:center; padding:10px;">All requests cancelled.</div>';
+            }
+        }
+
+        function updateLobbiesUI() {
+            const listDiv = document.getElementById('activeLobbiesList');
+            if (!listDiv) return;
+            listDiv.innerHTML = '';
+            activeLobbies.forEach(code => {
+                const deleteBtn = code !== "Default-Lobby" ? '<button class="btn btn-danger" style="width: auto; padding: 2px 6px; margin:0;" onclick="deleteLobby(\'' + code + '\')">Delete</button>' : '';
+                listDiv.innerHTML += '<div class="lobby-card"><span><b>' + code + '</b></span><div style="display: flex; gap: 4px;"><button class="btn" style="width: auto; padding: 2px 6px; margin:0;" onclick="joinLobby(\'' + code + '\')">Join</button>' + deleteBtn + '</div></div>';
+            });
+        }
+
+        function updatePlayersUI() {
+            const badge = document.getElementById('activeLobbyBadge');
+            const currentLobby = badge ? badge.innerText.replace("LOBBY: ", "") : "Default-Lobby";
+            const container = document.getElementById('playersListContainer');
+            if (!container) return;
+            
+            const players = lobbyPlayers[currentLobby] || [];
+
+            if (players.length === 0) {
+                container.innerHTML = '<div class="player-item"><span style="color:var(--text-dim);">No players in this lobby</span></div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            players.forEach(p => {
+                container.innerHTML += '<div class="player-item"><span>🟢 ' + p + '</span><div style="display:flex; gap:3px;"><button class="btn btn-danger" style="width:auto; padding:1px 5px; margin:0; font-size:0.7rem;" onclick="kickPlayer(\'' + currentLobby + '\', \'' + p + '\')">Kick</button><button class="btn btn-danger" style="width:auto; padding:1px 5px; margin:0; font-size:0.7rem; background:#790c0c;" onclick="banPlayer(\'' + p + '\')">Ban</button></div></div>';
+            });
+        }
+
+        function updateBannedUI() {
+            const contain
